@@ -14,7 +14,8 @@ import {
   TicketIcon,
   ClipboardDocumentIcon,
   KeyIcon,
-  CheckBadgeIcon
+  CheckBadgeIcon,
+  ArrowRightStartOnRectangleIcon
 } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -434,7 +435,18 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
         </div>
 
         {/* Footer info */}
-        <div className="mt-auto" />
+        <div className="mt-auto p-6 border-t border-white/5">
+          <button
+            onClick={async () => {
+              await fetch('/api/registro/logout', { method: 'POST' });
+              window.location.reload();
+            }}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all group"
+          >
+            <ArrowRightStartOnRectangleIcon className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+            Cerrar Sesión
+          </button>
+        </div>
       </aside>
 
       <main

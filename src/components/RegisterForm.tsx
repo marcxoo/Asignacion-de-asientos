@@ -7,7 +7,6 @@ import {
   AcademicCapIcon,
   ArrowRightIcon,
   CheckBadgeIcon,
-  QrCodeIcon,
   ClipboardDocumentIcon,
   KeyIcon
 } from '@heroicons/react/24/outline';

@@ -22,6 +22,20 @@ export async function GET() {
     if (error || !data) {
       return NextResponse.json(null);
     }
+
+    // Si el usuario existe pero no tiene código (registros antiguos), generamos uno
+    if (!data.codigo_acceso) {
+      const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const { error: updateError } = await supabase
+        .from('registros')
+        .update({ codigo_acceso: newCode })
+        .eq('id', data.id);
+
+      if (!updateError) {
+        data.codigo_acceso = newCode;
+      }
+    }
+
     return NextResponse.json(data);
   } catch {
     return NextResponse.json(null);
