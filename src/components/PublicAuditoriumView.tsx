@@ -208,14 +208,19 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
   function renderSeat(seatId: string) {
     const { numero } = parseSeatId(seatId);
     const isHovered = seatId === hoveredSeatId;
+    const isMySeat = seatId === mySeatId;
+
     return (
       <div
         key={seatId}
-        className={`${seatClass(seatId)} md:w-[28px] md:h-[34px] md:m-[3px] w-[32px] h-[38px] m-[4px] ${isHovered ? 'z-50 shadow-[0_0_20px_white] ring-2 ring-white/50 transition-all duration-200' : ''}`}
+        className={`${seatClass(seatId)} md:w-[28px] md:h-[34px] md:m-[3px] w-[32px] h-[38px] m-[4px] 
+          ${isHovered ? 'z-50 shadow-[0_0_20px_white] ring-2 ring-white/50 transition-all duration-200' : ''}
+          ${isMySeat ? 'z-40 ring-2 ring-white shadow-[0_0_15px_rgba(255,255,255,0.5)] scale-110' : ''}
+        `}
         data-seat-id={seatId}
         onMouseEnter={() => setHoveredSeatId(seatId)}
         onMouseLeave={() => setHoveredSeatId(null)}
-        style={isHovered ? { filter: 'brightness(1.5)', zIndex: 9999 } : undefined}
+        style={isHovered || isMySeat ? { filter: 'brightness(1.5)', zIndex: isHovered ? 9999 : 50 } : undefined}
       >
         <span className="seat-tooltip">{seatTooltip(seatId)}</span>
         <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white pointer-events-none z-10 select-none drop-shadow-md">
