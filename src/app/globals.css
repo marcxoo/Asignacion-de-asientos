@@ -255,3 +255,25 @@ body::after {
 .animate-pulse-glow {
   animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+@keyframes beacon-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 0, 0.7);
+    transform: scale(1.1);
+  }
+
+  70% {
+    box-shadow: 0 0 0 15px rgba(255, 105, 0, 0);
+    transform: scale(1.15);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 105, 0, 0);
+    transform: scale(1.1);
+  }
+}
+
+.animate-beacon {
+  animation: beacon-pulse 2s infinite;
+  z-index: 100 !important;
+}
