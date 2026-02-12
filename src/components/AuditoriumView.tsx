@@ -335,7 +335,7 @@ export function AuditoriumView() {
                         key={r.seatId}
                         onClick={() => {
                           setSelectedSeatId(r.seatId);
-                          setIsMobileMenuOpen(false);
+                          setIsSidebarOpen(false);
                         }}
                         onMouseEnter={() => setHoveredSeatId(r.seatId)}
                         onMouseLeave={() => setHoveredSeatId(null)}
