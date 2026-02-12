@@ -10,7 +10,9 @@ import { supabase } from '@/lib/supabase';
 import {
   UserCircleIcon,
   MagnifyingGlassIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
@@ -80,6 +82,37 @@ export function AuditoriumView() {
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleExport = () => {
+    window.location.href = '/api/admin/export';
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/admin/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Error importing');
+
+      alert('Importación exitosa. La página se recargará para reflejar los cambios.');
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      alert('Error al importar el archivo.');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // ── Stats ──
   const totalSeats = useMemo(() => {
@@ -293,6 +326,41 @@ export function AuditoriumView() {
                 <div className="p-5 bg-orange/5 rounded-3xl border border-orange/10">
                   <span className="block text-2xl font-black text-orange leading-none mb-1">{stats.assigned}</span>
                   <span className="text-[9px] uppercase text-orange/50 font-black tracking-widest">Ocupados</span>
+                </div>
+              </div>
+
+              {/* Excel Management */}
+              <div className="space-y-4 pt-4 border-t border-white/5">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
+                  <ChartBarIcon className="w-3.5 h-3.5" />
+                  Gestión Excel
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleExport}
+                    className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-[#1D754C]/20 border border-[#1D754C]/30 hover:bg-[#1D754C]/30 transition-all group"
+                  >
+                    <ArrowDownTrayIcon className="w-5 h-5 text-[#25D366] group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold text-[#25D366]">Exportar</span>
+                  </button>
+
+                  <label className="relative flex items-center justify-center gap-2 p-4 rounded-2xl bg-white/[0.05] border border-white/10 hover:bg-white/10 transition-all group cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".xlsx, .xls"
+                      onChange={handleImport}
+                      className="hidden"
+                      disabled={importing}
+                    />
+                    {importing ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <ArrowUpTrayIcon className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
+                        <span className="text-xs font-bold text-white">Importar</span>
+                      </>
+                    )}
+                  </label>
                 </div>
               </div>
 
