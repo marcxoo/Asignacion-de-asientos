@@ -223,7 +223,7 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
         style={isHovered || isMySeat ? { filter: isHovered ? 'brightness(1.5)' : 'brightness(1.1)', zIndex: isHovered ? 9999 : 50 } : undefined}
       >
         <span className="seat-tooltip">{seatTooltip(seatId)}</span>
-        <span className="absolute inset-0 flex items-center justify-center text-[13px] md:text-[15px] font-black text-white pointer-events-none z-10 select-none drop-shadow-md shadow-black">
+        <span className="absolute inset-0 flex items-center justify-center text-[16px] font-black text-white pointer-events-none z-10 select-none drop-shadow-md shadow-black">
           {numero}
         </span>
         <div className="seat-cushion" />

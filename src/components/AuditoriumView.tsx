@@ -210,7 +210,7 @@ export function AuditoriumView() {
         style={isHovered ? { filter: 'brightness(1.5)', zIndex: 9999 } : undefined}
       >
         <span className="seat-tooltip">{seatTooltip(seatId)}</span>
-        <span className="absolute inset-0 flex items-center justify-center text-[12px] md:text-[14px] font-black text-white pointer-events-none z-10 select-none drop-shadow-md">
+        <span className="absolute inset-0 flex items-center justify-center text-[15px] font-black text-white pointer-events-none z-10 select-none drop-shadow-md">
           {numero}
         </span>
         <div className="seat-cushion" />
