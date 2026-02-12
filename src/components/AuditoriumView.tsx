@@ -1,21 +1,25 @@
 'use client';
 
-import { useState, useCallback, useMemo, Fragment, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, Fragment, useEffect } from 'react';
 import Link from 'next/link';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { SeatState, SeatCategory, SeatAssignment } from '@/lib/types';
+import { SeatState, SeatCategory } from '@/lib/types';
 import { ROWS, parseSeatId, CATEGORY_CONFIG } from '@/lib/seats-data';
 import { AssignmentModal } from './AssignmentModal';
 import { supabase } from '@/lib/supabase';
 import {
   UserCircleIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   MagnifyingGlassIcon,
-  ChartBarIcon,
-  InformationCircleIcon
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+
+interface AssignmentRow {
+  seat_id: string;
+  nombre_invitado: string;
+  categoria: SeatCategory;
+  assigned_at: string;
+}
 
 export function AuditoriumView() {
   const [assignments, setAssignments] = useState<SeatState>({});
@@ -31,7 +35,7 @@ export function AuditoriumView() {
         return;
       }
       const newAssignments: SeatState = {};
-      data?.forEach((row: any) => {
+      (data as AssignmentRow[])?.forEach((row) => {
         newAssignments[row.seat_id] = {
           nombre_invitado: row.nombre_invitado,
           categoria: row.categoria,
@@ -48,7 +52,7 @@ export function AuditoriumView() {
       .channel('realtime assignments')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          const row = payload.new as any;
+          const row = payload.new as AssignmentRow;
           setAssignments(prev => ({
             ...prev,
             [row.seat_id]: {
@@ -58,7 +62,7 @@ export function AuditoriumView() {
             }
           }));
         } else if (payload.eventType === 'DELETE') {
-          const row = payload.old as any;
+          const row = payload.old as { seat_id: string };
           setAssignments(prev => {
             const next = { ...prev };
             delete next[row.seat_id];
@@ -76,7 +80,6 @@ export function AuditoriumView() {
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
-  const transformComponentRef = useRef<any | null>(null);
 
   // ── Stats ──
   const totalSeats = useMemo(() => {
@@ -108,27 +111,7 @@ export function AuditoriumView() {
 
   // ── Handlers ──
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredAssignments = useMemo(() => {
-    if (!searchTerm.trim()) return assignments;
-    const lowerSearch = searchTerm.toLowerCase();
-    const filtered: SeatState = {};
-    Object.entries(assignments).forEach(([id, a]) => {
-      if (a?.nombre_invitado.toLowerCase().includes(lowerSearch)) {
-        filtered[id] = a;
-      }
-    });
-    return filtered;
-  }, [assignments, searchTerm]);
-
-  const sortedAssignmentList = useMemo(() => {
-    return Object.entries(assignments)
-      .filter(([, a]) => !!a)
-      .map(([id, a]) => ({ id, ...a! }))
-      .sort((a, b) => a.nombre_invitado.localeCompare(b.nombre_invitado));
-  }, [assignments]);
+  const [isSidebarCollapsed] = useState(false);
 
   const handleMapClick = useCallback((e: React.MouseEvent) => {
     const target = (e.target as HTMLElement).closest('[data-seat-id]') as HTMLElement | null;
@@ -204,7 +187,7 @@ export function AuditoriumView() {
     if (!a) return 'seat seat-disponible';
 
     // Dim seats that don't match search
-    const isMatch = !searchTerm.trim() || a.nombre_invitado.toLowerCase().includes(searchTerm.toLowerCase());
+    const isMatch = !searchQuery.trim() || a.nombre_invitado.toLowerCase().includes(searchQuery.toLowerCase());
     return `seat seat-${a.categoria} ${!isMatch ? 'opacity-20 grayscale' : ''}`;
   }
 

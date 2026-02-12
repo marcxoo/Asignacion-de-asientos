@@ -3,6 +3,7 @@
  * Requiere DATABASE_URL en .env.local (Connection string de Supabase: Settings → Database).
  * Uso: npm run db:migrate
  */
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs');
 const path = require('path');
 

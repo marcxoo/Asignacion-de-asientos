@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { SeatState, SeatCategory } from '@/lib/types';
 import { CATEGORY_CONFIG, parseSeatId } from '@/lib/seats-data';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   XMarkIcon,
   CheckCircleIcon,
   UserCircleIcon,
-  TicketIcon,
   TrashIcon
 } from '@heroicons/react/24/outline';
 
@@ -104,8 +103,8 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
                     type="button"
                     onClick={() => setCategoria(key)}
                     className={`relative p-4 rounded-2xl border-2 transition-all group overflow-hidden ${categoria === key
-                        ? 'bg-white/5'
-                        : 'bg-transparent border-white/5 hover:border-white/10'
+                      ? 'bg-white/5'
+                      : 'bg-transparent border-white/5 hover:border-white/10'
                       }`}
                     style={{
                       borderColor: categoria === key ? config.hex : undefined

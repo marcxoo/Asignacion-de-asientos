@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     const supabase = createSupabaseServer();
 
     // 1. Obtener todos los registros ordenados por fecha de creación (los más viejos primero)

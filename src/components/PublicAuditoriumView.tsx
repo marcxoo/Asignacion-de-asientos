@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { SeatState, SeatCategory, Registro } from '@/lib/types';
 import { ROWS, parseSeatId, CATEGORY_CONFIG } from '@/lib/seats-data';
@@ -12,7 +12,9 @@ import {
   ChartBarIcon,
   InformationCircleIcon,
   TicketIcon,
-  ChevronRightIcon
+  ClipboardDocumentIcon,
+  KeyIcon,
+  CheckBadgeIcon
 } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -75,6 +77,7 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   const mySeatId = useMemo(() => {
     return Object.entries(assignments).find(([, a]) => a?.registro_id === me.id)?.[0] ?? null;
@@ -308,6 +311,34 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
               </div>
             </div>
           </div>
+
+          {me.codigo_acceso && (
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/5 relative group">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  <KeyIcon className="w-3.5 h-3.5" />
+                  Código de Acceso
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(me.codigo_acceso!);
+                    setCopiedCode(true);
+                    setTimeout(() => setCopiedCode(false), 2000);
+                  }}
+                  className="text-xs text-slate-500 hover:text-white transition-colors p-1"
+                  title="Copiar código"
+                >
+                  {copiedCode ? <CheckBadgeIcon className="w-4 h-4 text-emerald-500" /> : <ClipboardDocumentIcon className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="font-mono text-xl font-black text-orange tracking-[0.2em] text-center select-all bg-black/20 rounded-lg py-2">
+                {me.codigo_acceso}
+              </div>
+              <p className="text-[9px] text-slate-600 mt-2 text-center leading-tight">
+                Usa este código para ver tu asiento en otros dispositivos.
+              </p>
+            </div>
+          )}
 
           {/* Your Seat Section */}
           <AnimatePresence mode="wait">

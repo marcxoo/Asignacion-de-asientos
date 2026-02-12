@@ -41,10 +41,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generar código de acceso único (6 caracteres alfanuméricos)
+    const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
     const { data, error } = await supabase
       .from('registros')
-      .insert({ nombre, categoria, token })
-      .select('id, nombre, categoria, token')
+      .insert({ nombre, categoria, token, codigo_acceso: accessCode })
+      .select('id, nombre, categoria, token, codigo_acceso')
       .single();
 
     if (error) {
@@ -65,6 +68,7 @@ export async function POST(request: NextRequest) {
       id: data.id,
       nombre: data.nombre,
       categoria: data.categoria,
+      codigo_acceso: data.codigo_acceso,
     });
   } catch (e) {
     console.error(e);

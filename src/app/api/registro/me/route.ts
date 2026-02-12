@@ -15,7 +15,7 @@ export async function GET() {
     const supabase = createSupabaseServer();
     const { data, error } = await supabase
       .from('registros')
-      .select('id, nombre, categoria')
+      .select('id, nombre, categoria, codigo_acceso')
       .eq('token', token)
       .single();
 

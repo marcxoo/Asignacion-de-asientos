@@ -11,6 +11,7 @@ export interface Registro {
   id: string;
   nombre: string;
   categoria: SeatCategory;
+  codigo_acceso?: string;
 }
 
 export type SeatState = Record<string, SeatAssignment | undefined>;

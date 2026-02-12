@@ -2,7 +2,7 @@
 
 import { parseSeatId, CATEGORY_CONFIG } from '@/lib/seats-data';
 import { SeatAssignment } from '@/lib/types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { XMarkIcon, CheckCircleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 
 interface PublicSeatModalProps {
