@@ -160,9 +160,11 @@ body::after {
 
 /* Higher contrast for numbers */
 .seat span.absolute {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 4px rgba(0, 0, 0, 0.6);
+  font-weight: 900;
   letter-spacing: -0.02em;
+  z-index: 20;
+  /* Ensure it stays above cushion */
 }
 
 /* Selected */
