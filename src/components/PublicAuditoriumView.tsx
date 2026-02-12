@@ -215,18 +215,24 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
         key={seatId}
         className={`${seatClass(seatId)} md:w-[28px] md:h-[34px] md:m-[3px] w-[32px] h-[38px] m-[4px] 
           ${isHovered ? 'z-50 shadow-[0_0_20px_white] ring-2 ring-white/50 transition-all duration-200' : ''}
-          ${isMySeat ? 'z-40 animate-beacon ring-2 ring-orange shadow-[0_0_20px_rgba(255,105,0,0.6)]' : ''}
+          ${isMySeat ? 'z-40 ring-2 ring-white shadow-[0_0_15px_rgba(255,255,255,0.8)] scale-110' : ''}
         `}
         data-seat-id={seatId}
         onMouseEnter={() => setHoveredSeatId(seatId)}
         onMouseLeave={() => setHoveredSeatId(null)}
-        style={isHovered || isMySeat ? { filter: isHovered ? 'brightness(1.5)' : 'brightness(1.2)', zIndex: isHovered ? 9999 : 50 } : undefined}
+        style={isHovered || isMySeat ? { filter: isHovered ? 'brightness(1.5)' : 'brightness(1.1)', zIndex: isHovered ? 9999 : 50 } : undefined}
       >
         <span className="seat-tooltip">{seatTooltip(seatId)}</span>
         <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white pointer-events-none z-10 select-none drop-shadow-md">
           {numero}
         </span>
         <div className="seat-cushion" />
+        {isMySeat && (
+          <>
+            <div className="beacon-ring" />
+            <div className="beacon-ring" style={{ animationDelay: '0.5s' }} />
+          </>
+        )}
       </div>
     );
   }
