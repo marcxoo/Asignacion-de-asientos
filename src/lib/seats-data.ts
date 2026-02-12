@@ -70,4 +70,7 @@ export const CATEGORY_CONFIG: Record<SeatCategory, { label: string; color: strin
   docente: { label: 'Docente', color: 'bg-sky-500', hex: '#0ea5e9' },      // Sky Blue
   invitado: { label: 'Invitado', color: 'bg-emerald-500', hex: '#10b981' }, // Emerald
   estudiante: { label: 'Estudiante', color: 'bg-orange-500', hex: '#f97316' }, // Orange
+  bloqueado: { label: 'Bloqueado / Reservado', color: 'bg-indigo-900', hex: '#312e81' }, // Indigo 900
 };
+
+export const TEACHER_SLOT_LABEL = 'Cupo Disponible';

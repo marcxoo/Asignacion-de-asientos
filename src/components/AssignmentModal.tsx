@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SeatState, SeatCategory } from '@/lib/types';
-import { CATEGORY_CONFIG, parseSeatId } from '@/lib/seats-data';
+import { CATEGORY_CONFIG, parseSeatId, TEACHER_SLOT_LABEL } from '@/lib/seats-data';
 import { motion } from 'framer-motion';
 import {
   XMarkIcon,
@@ -28,8 +28,18 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (nombre.trim()) {
-      onAssign(seatId, nombre, categoria);
+
+    let finalName = nombre.trim();
+
+    // Auto-fill specialized categories
+    if (!finalName && (categoria === 'bloqueado' || categoria === 'autoridad')) {
+      finalName = 'Reservado';
+    } else if (!finalName && categoria === 'docente') {
+      finalName = TEACHER_SLOT_LABEL;
+    }
+
+    if (finalName) {
+      onAssign(seatId, finalName, categoria);
     }
   };
 
@@ -101,7 +111,17 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setCategoria(key)}
+                    onClick={() => {
+                      setCategoria(key);
+                      // Auto-fill specialized categories
+                      if (!nombre) {
+                        if (key === 'docente') {
+                          setNombre(TEACHER_SLOT_LABEL);
+                        } else if (key === 'bloqueado' || key === 'autoridad') {
+                          setNombre('Reservado');
+                        }
+                      }
+                    }}
                     className={`relative p-4 rounded-2xl border-2 transition-all group overflow-hidden ${categoria === key
                       ? 'bg-white/5'
                       : 'bg-transparent border-white/5 hover:border-white/10'

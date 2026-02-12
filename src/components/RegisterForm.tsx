@@ -12,12 +12,14 @@ import {
 } from '@heroicons/react/24/outline';
 
 interface RegisterFormProps {
+  templateId: string;
+  templateName?: string;
   onSuccess: () => void;
 }
 
 type ViewState = 'REGISTER' | 'LOGIN' | 'SUCCESS';
 
-export function RegisterForm({ onSuccess }: RegisterFormProps) {
+export function RegisterForm({ templateId, templateName, onSuccess }: RegisterFormProps) {
   const [viewState, setViewState] = useState<ViewState>('REGISTER');
 
   // Register State
@@ -48,7 +50,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       const res = await fetch('/api/registro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nombre.trim(), categoria }),
+        body: JSON.stringify({ nombre: nombre.trim(), categoria, template_id: templateId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -77,7 +79,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       const res = await fetch('/api/registro/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: loginCode.trim() }),
+        body: JSON.stringify({ code: loginCode.trim(), template_id: templateId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -122,7 +124,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           </motion.div>
 
           <h1 className="text-4xl font-black text-white tracking-tighter leading-none mb-3">
-            Graduación <span className="text-orange drop-shadow-[0_0_15px_rgba(255,105,0,0.3)]">2026</span>
+            {templateName || 'Graduación'} <span className="text-orange drop-shadow-[0_0_15px_rgba(255,105,0,0.3)]">{templateName ? '' : '2026'}</span>
           </h1>
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[5px] opacity-70">
             Sistema de Asignación
@@ -171,31 +173,33 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
                       ¿Quién eres?
                     </label>
                     <div className="grid grid-cols-2 gap-3">
-                      {(Object.entries(CATEGORY_CONFIG) as [SeatCategory, typeof CATEGORY_CONFIG['invitado']][]).map(([key, config]) => (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => setCategoria(key)}
-                          className={`relative p-4 rounded-2xl border-2 transition-all group overflow-hidden ${categoria === key
-                            ? 'bg-white/5 shadow-inner'
-                            : 'bg-transparent border-white/5 hover:border-white/10'
-                            }`}
-                          style={{
-                            borderColor: categoria === key ? config.hex : undefined
-                          }}
-                        >
-                          <div className="flex items-center gap-3 relative z-10">
-                            <div
-                              className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]"
-                              style={{ backgroundColor: config.hex }}
-                            />
-                            <span className={`text-[13px] font-black tracking-tight transition-colors ${categoria === key ? 'text-white' : 'text-slate-500 group-hover:text-slate-400'
-                              }`}>
-                              {config.label}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
+                      {(Object.entries(CATEGORY_CONFIG) as [SeatCategory, typeof CATEGORY_CONFIG['invitado']][])
+                        .filter(([key]) => key !== 'autoridad' && key !== 'bloqueado')
+                        .map(([key, config]) => (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setCategoria(key)}
+                            className={`relative p-4 rounded-2xl border-2 transition-all group overflow-hidden ${categoria === key
+                              ? 'bg-white/5 shadow-inner'
+                              : 'bg-transparent border-white/5 hover:border-white/10'
+                              }`}
+                            style={{
+                              borderColor: categoria === key ? config.hex : undefined
+                            }}
+                          >
+                            <div className="flex items-center gap-3 relative z-10">
+                              <div
+                                className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]"
+                                style={{ backgroundColor: config.hex }}
+                              />
+                              <span className={`text-[13px] font-black tracking-tight transition-colors ${categoria === key ? 'text-white' : 'text-slate-500 group-hover:text-slate-400'
+                                }`}>
+                                {config.label}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
                     </div>
                   </div>
 

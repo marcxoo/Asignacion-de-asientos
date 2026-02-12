@@ -12,7 +12,9 @@ import {
   MagnifyingGlassIcon,
   ChartBarIcon,
   ArrowDownTrayIcon,
-  ArrowUpTrayIcon
+  ArrowUpTrayIcon,
+  ClipboardDocumentIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
@@ -20,10 +22,25 @@ interface AssignmentRow {
   seat_id: string;
   nombre_invitado: string;
   categoria: SeatCategory;
+  registro_id: string | null;
   assigned_at: string;
 }
 
-export function AuditoriumView() {
+interface Template {
+  id: string;
+  name: string;
+  data: AssignmentRow[];
+  created_at: string;
+}
+
+interface AuditoriumViewProps {
+  onBack?: () => void;
+  activeTemplateId?: string;
+  activeTemplateName?: string;
+  onSaveTemplate?: (name: string, data: any[]) => Promise<void>;
+}
+
+export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, onSaveTemplate }: AuditoriumViewProps) {
   const [assignments, setAssignments] = useState<SeatState>({});
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +48,8 @@ export function AuditoriumView() {
   useEffect(() => {
     // 1. Fetch initial data
     const fetchAssignments = async () => {
-      const { data, error } = await supabase.from('assignments').select('*');
+      if (!activeTemplateId) return;
+      const { data, error } = await supabase.from('assignments').select('*').eq('template_id', activeTemplateId);
       if (error) {
         console.error('Error fetching assignments:', error);
         return;
@@ -41,6 +59,7 @@ export function AuditoriumView() {
         newAssignments[row.seat_id] = {
           nombre_invitado: row.nombre_invitado,
           categoria: row.categoria,
+          registro_id: row.registro_id,
           asignado_en: row.assigned_at
         };
       });
@@ -50,9 +69,10 @@ export function AuditoriumView() {
     fetchAssignments();
 
     // 2. Subscribe to changes
+    if (!activeTemplateId) return;
     const channel = supabase
-      .channel('realtime assignments')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, (payload) => {
+      .channel(`realtime assignments ${activeTemplateId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments', filter: `template_id=eq.${activeTemplateId}` }, (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           const row = payload.new as AssignmentRow;
           setAssignments(prev => ({
@@ -60,6 +80,7 @@ export function AuditoriumView() {
             [row.seat_id]: {
               nombre_invitado: row.nombre_invitado,
               categoria: row.categoria,
+              registro_id: row.registro_id,
               asignado_en: row.assigned_at
             }
           }));
@@ -83,6 +104,71 @@ export function AuditoriumView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+
+  // Template State
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+
+  // ── Auto-save logic ──
+  useEffect(() => {
+    if (!activeTemplateName) return;
+
+    const timer = setTimeout(() => {
+      // Map local state back to row format
+      const data = Object.entries(assignments)
+        .filter(([_, a]) => !!a)
+        .map(([id, a]) => ({
+          seat_id: id,
+          nombre_invitado: a!.nombre_invitado,
+          categoria: a!.categoria,
+          registro_id: a!.registro_id,
+          assigned_at: a!.asignado_en,
+          template_id: activeTemplateId
+        }));
+      if (onSaveTemplate) {
+        onSaveTemplate(activeTemplateName, data);
+      }
+    }, 2000); // Debounce for 2 seconds
+
+    return () => clearTimeout(timer);
+  }, [assignments, activeTemplateName, onSaveTemplate]);
+
+  // Handle Save
+  const handleSaveToTemplate = async (name: string) => {
+    const data = Object.entries(assignments)
+      .filter(([_, a]) => !!a)
+      .map(([id, a]) => ({
+        seat_id: id,
+        nombre_invitado: a!.nombre_invitado,
+        categoria: a!.categoria,
+        registro_id: a!.registro_id,
+        assigned_at: a!.asignado_en,
+        template_id: activeTemplateId
+      }));
+
+    if (onSaveTemplate) {
+      await onSaveTemplate(name, data);
+    }
+  };
+
+  const handleSaveClick = () => {
+    if (activeTemplateName) {
+      // Direct save if already in a template
+      handleSaveToTemplate(activeTemplateName);
+    } else {
+      setNewTemplateName('');
+      setIsSaveModalOpen(true);
+    }
+  };
+
+  const confirmSave = async () => {
+    if (!newTemplateName.trim()) return;
+    await handleSaveToTemplate(newTemplateName);
+    setIsSaveModalOpen(false);
+  };
+
+  // Removed internal handlers for load/delete since they are in parent
+
 
   const handleExport = () => {
     window.location.href = '/api/admin/export';
@@ -130,6 +216,7 @@ export function AuditoriumView() {
       docentes: entries.filter(a => a?.categoria === 'docente').length,
       invitados: entries.filter(a => a?.categoria === 'invitado').length,
       estudiantes: entries.filter(a => a?.categoria === 'estudiante').length,
+      bloqueados: entries.filter(a => a?.categoria === 'bloqueado').length,
     };
   }, [assignments, totalSeats]);
 
@@ -172,13 +259,14 @@ export function AuditoriumView() {
       seat_id: seatId,
       nombre_invitado: nombre,
       categoria: categoria,
-      assigned_at: new Date().toISOString()
+      assigned_at: new Date().toISOString(),
+      template_id: activeTemplateId
     });
 
     if (error) {
       console.error('Error:', error);
       // Rollback on error
-      const { data } = await supabase.from('assignments').select('*').eq('seat_id', seatId).single();
+      const { data } = await supabase.from('assignments').select('*').eq('seat_id', seatId).eq('template_id', activeTemplateId).single();
       setAssignments(prev => {
         const next = { ...prev };
         if (data) {
@@ -194,6 +282,11 @@ export function AuditoriumView() {
       });
     }
     setLoading(false);
+
+    // Auto-save if in a template
+    if (activeTemplateName) {
+      handleSaveToTemplate(activeTemplateName);
+    }
   };
 
   const handleRelease = async (seatId: string) => {
@@ -206,10 +299,15 @@ export function AuditoriumView() {
     });
     setSelectedSeatId(null);
 
-    const { error } = await supabase.from('assignments').delete().eq('seat_id', seatId);
+    const { error } = await supabase.from('assignments').delete().eq('seat_id', seatId).eq('template_id', activeTemplateId);
 
     if (error) {
       console.error('Error releasing seat:', error);
+    } else {
+      // Auto-save if in a template
+      if (activeTemplateName) {
+        handleSaveToTemplate(activeTemplateName);
+      }
     }
     setLoading(false);
   };
@@ -221,7 +319,12 @@ export function AuditoriumView() {
 
     // Dim seats that don't match search
     const isMatch = !searchQuery.trim() || a.nombre_invitado.toLowerCase().includes(searchQuery.toLowerCase());
-    return `seat seat-${a.categoria} ${!isMatch ? 'opacity-20 grayscale' : ''}`;
+
+    // Dim "Cupo Disponible" slots for teachers so they are distinct from actual assignments
+    const isTeacherSlot = a.categoria === 'docente' && (!a.registro_id || a.nombre_invitado === 'Cupo Disponible' || a.nombre_invitado === 'Reservado');
+    const isTeacherDim = isTeacherSlot ? 'opacity-60 animate-pulse' : '';
+
+    return `seat seat-${a.categoria} ${!isMatch ? 'opacity-20 grayscale' : isTeacherDim}`;
   }
 
   function seatTooltip(seatId: string): string {
@@ -290,10 +393,18 @@ export function AuditoriumView() {
           w-full h-full md:h-full will-change-[width,height,transform]`}
       >
         {/* Header Section */}
-        <div className="p-8 border-b border-white/5 flex flex-row justify-between items-center relative z-10 transition-all">
+        <div className="p-8 border-b border-white/5 flex flex-col gap-4 relative z-10 transition-all">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-2 mb-2 transition-colors"
+            >
+              ← Volver al Menú
+            </button>
+          )}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <h1 className="text-2xl font-black text-white tracking-tighter leading-none">
-              ADMIN <span className="text-orange drop-shadow-[0_0_10px_rgba(255,105,0,0.3)]">2026</span>
+              {activeTemplateName || 'ADMIN'} <span className="text-orange drop-shadow-[0_0_10px_rgba(255,105,0,0.3)]">2026</span>
             </h1>
             <p className="text-[10px] font-black text-slate-500 mt-2 uppercase tracking-[3px] opacity-60">Control Central</p>
           </motion.div>
@@ -412,11 +523,28 @@ export function AuditoriumView() {
                 </div>
               </div>
 
+
+              {/* Template Management */}
+              <div className="pt-8 border-t border-white/5 space-y-4">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
+                  <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                  Gestión del Evento
+                </h3>
+
+                <button
+                  onClick={handleSaveClick}
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all group"
+                >
+                  <ArrowDownTrayIcon className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold text-indigo-400">Guardar Cambios</span>
+                </button>
+              </div>
+
               {/* Reference */}
               <div className="pt-8 border-t border-white/5">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] mb-6">Referencia</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {(['autoridad', 'docente', 'invitado', 'estudiante'] as const).map(cat => (
+                  {(['autoridad', 'docente', 'invitado', 'estudiante', 'bloqueado'] as const).map(cat => (
                     <div key={cat} className="flex items-center gap-3 text-[11px] font-bold text-slate-400 p-2 rounded-xl bg-white/[0.02]">
                       <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: CATEGORY_CONFIG[cat].hex }} />
                       <span className="tracking-wide">{CATEGORY_CONFIG[cat].label}</span>
@@ -668,6 +796,38 @@ export function AuditoriumView() {
           />
         )
       }
+
+      {/* Save Template Modal */}
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#001D2D] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-4">Guardar Plantilla</h3>
+            <input
+              type="text"
+              placeholder="Nombre de la plantilla (ej. Graduación 2026)"
+              className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white mb-4 focus:ring-2 focus:ring-indigo-500 outline-none"
+              value={newTemplateName}
+              onChange={(e) => setNewTemplateName(e.target.value)}
+              autoFocus
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsSaveModalOpen(false)}
+                className="px-4 py-2 text-slate-400 hover:text-white font-bold text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmSave}
+                disabled={!newTemplateName.trim()}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs disabled:opacity-50"
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 }

@@ -14,8 +14,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const seatId = typeof body.seat_id === 'string' ? body.seat_id.trim() : '';
-    if (!seatId) {
-      return NextResponse.json({ error: 'seat_id requerido' }, { status: 400 });
+    const templateId = body.template_id;
+
+    if (!seatId || !templateId) {
+      return NextResponse.json({ error: 'seat_id y template_id requeridos' }, { status: 400 });
     }
 
     const supabase = createSupabaseServer();
@@ -24,30 +26,54 @@ export async function POST(request: NextRequest) {
       .from('registros')
       .select('id, nombre, categoria')
       .eq('token', token)
+      .eq('template_id', templateId) // Asegurar que el registro sea para ESE evento
       .single();
 
     if (!registro) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json({ error: 'No autorizado para este evento' }, { status: 401 });
     }
 
     const { data: existing } = await supabase
       .from('assignments')
-      .select('seat_id, registro_id')
+      .select('seat_id, registro_id, categoria, nombre_invitado')
       .eq('seat_id', seatId)
+      .eq('template_id', templateId) // Filtrar por evento
       .single();
 
     if (existing) {
-      return NextResponse.json(
-        { error: 'El asiento ya está ocupado' },
-        { status: 409 }
-      );
+      const isTeacherSlot = existing.categoria === 'docente' && (existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
+
+      // If it's NOT a teacher slot, OR if it's already assigned to someone, block it
+      if (existing.registro_id || !isTeacherSlot || registro.categoria !== 'docente') {
+        return NextResponse.json(
+          { error: 'El asiento ya está ocupado' },
+          { status: 409 }
+        );
+      }
+
+      // If we reach here, it's an available teacher slot and the user is a teacher.
+      // We will delete it first to avoid conflict with the insert below.
+      await supabase.from('assignments').delete().eq('seat_id', seatId).eq('template_id', templateId);
     }
 
-    // 4. Verificar si el usuario ya tiene OTRO asiento asignado y liberarlo
-    await supabase
-      .from('assignments')
-      .delete()
-      .eq('registro_id', registro.id);
+    // 4. Verificar si el usuario ya tiene OTRO asiento asignado en ESTE evento y liberarlo/revertirlo
+    if (registro.categoria === 'docente') {
+      await supabase
+        .from('assignments')
+        .update({
+          nombre_invitado: 'Cupo Disponible',
+          registro_id: null,
+          categoria: 'docente'
+        })
+        .eq('registro_id', registro.id)
+        .eq('template_id', templateId);
+    } else {
+      await supabase
+        .from('assignments')
+        .delete()
+        .eq('registro_id', registro.id)
+        .eq('template_id', templateId);
+    }
 
     // 5. Asignar el nuevo asiento
     const { error: insertError } = await supabase.from('assignments').insert({
@@ -56,6 +82,7 @@ export async function POST(request: NextRequest) {
       categoria: registro.categoria,
       assigned_at: new Date().toISOString(),
       registro_id: registro.id,
+      template_id: templateId
     });
 
     if (insertError) {

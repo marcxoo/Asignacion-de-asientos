@@ -7,10 +7,10 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
 export async function POST(request: NextRequest) {
     try {
-        const { code } = await request.json();
+        const { code, template_id } = await request.json();
 
-        if (!code || typeof code !== 'string') {
-            return NextResponse.json({ error: 'Código requerido' }, { status: 400 });
+        if (!code || typeof code !== 'string' || !template_id) {
+            return NextResponse.json({ error: 'Código y ID de evento requeridos' }, { status: 400 });
         }
 
         const supabase = createSupabaseServer();
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
             .from('registros')
             .select('id, nombre, categoria, token, codigo_acceso')
             .eq('codigo_acceso', normalizedCode)
+            .eq('template_id', template_id)
             .single();
 
         if (error || !data) {

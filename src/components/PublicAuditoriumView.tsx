@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { SeatState, SeatCategory, Registro } from '@/lib/types';
-import { ROWS, parseSeatId, CATEGORY_CONFIG } from '@/lib/seats-data';
+import { ROWS, parseSeatId, CATEGORY_CONFIG, TEACHER_SLOT_LABEL } from '@/lib/seats-data';
 import { PublicSeatModal } from './PublicSeatModal';
 import { supabase } from '@/lib/supabase';
 import {
@@ -21,14 +21,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface PublicAuditoriumViewProps {
   me: Registro;
+  templateId: string;
+  templateName?: string;
 }
 
-export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
+export function PublicAuditoriumView({ me, templateId, templateName }: PublicAuditoriumViewProps) {
   const [assignments, setAssignments] = useState<SeatState>({});
 
   useEffect(() => {
     const fetchAssignments = async () => {
-      const { data, error } = await supabase.from('assignments').select('seat_id, nombre_invitado, categoria, assigned_at, registro_id');
+      const { data, error } = await supabase
+        .from('assignments')
+        .select('seat_id, nombre_invitado, categoria, assigned_at, registro_id')
+        .eq('template_id', templateId);
       if (error) {
         console.error('Error fetching assignments:', error);
         return;
@@ -48,8 +53,8 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
     fetchAssignments();
 
     const channel = supabase
-      .channel('public assignments')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments' }, (payload) => {
+      .channel(`public assignments ${templateId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments', filter: `template_id=eq.${templateId}` }, (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           const row = payload.new as { seat_id: string; nombre_invitado: string; categoria: string; assigned_at: string; registro_id?: string | null };
           setAssignments(prev => ({
@@ -84,15 +89,31 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
     return Object.entries(assignments).find(([, a]) => a?.registro_id === me.id)?.[0] ?? null;
   }, [assignments, me.id]);
 
+  // ... inside PublicAuditoriumView
+
   const handleMapClick = useCallback((e: React.MouseEvent) => {
     const target = (e.target as HTMLElement).closest('[data-seat-id]') as HTMLElement | null;
     if (!target) return;
-    setSelectedSeatId(target.dataset.seatId!);
-    // Close sidebar on mobile when a seat is selected to show the modal clearly
+
+    const seatId = target.dataset.seatId!;
+    const assignment = assignments[seatId];
+
+    // Logic for Teachers
+    if (me.categoria === 'docente') {
+      const isTeacherSlot = assignment?.categoria === 'docente' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+      console.log('Teacher click check:', { seatId, category: assignment?.categoria, name: assignment?.nombre_invitado, isTeacherSlot });
+      if (!isTeacherSlot) return; // Teachers can ONLY select specific slots
+    }
+    // Logic for Others (Students/Guests)
+    else {
+      if (assignment) return; // Others can ONLY select empty seats
+    }
+
+    setSelectedSeatId(seatId);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, []);
+  }, [assignments, me.categoria]);
 
   const handleAssign = useCallback(async () => {
     if (!selectedSeatId) return;
@@ -104,7 +125,19 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
       const next = { ...prev };
       // Liberar cualquier asiento anterior que tuviera este usuario
       Object.keys(next).forEach(key => {
-        if (next[key]?.registro_id === me.id) delete next[key];
+        if (next[key]?.registro_id === me.id) {
+          if (me.categoria === 'docente') {
+            // Revertir a Cupo Disponible
+            next[key] = {
+              nombre_invitado: 'Cupo Disponible',
+              categoria: 'docente',
+              asignado_en: new Date().toISOString(),
+              registro_id: null // Ensure no one owns it
+            };
+          } else {
+            delete next[key];
+          }
+        }
       });
       // Asignar el nuevo
       next[seatId] = {
@@ -120,12 +153,12 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
       const res = await fetch('/api/asiento/asignar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seat_id: seatId }),
+        body: JSON.stringify({ seat_id: seatId, template_id: templateId }),
       });
 
       if (!res.ok) {
         // Rollback if error
-        const { data } = await supabase.from('assignments').select('*').eq('seat_id', seatId).single();
+        const { data } = await supabase.from('assignments').select('*').eq('seat_id', seatId).eq('template_id', templateId).single();
         setAssignments(prev => {
           const next = { ...prev };
           if (data) {
@@ -157,7 +190,17 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
     const seatId = selectedSeatId;
     setAssignments(prev => {
       const n = { ...prev };
-      delete n[seatId];
+      if (me.categoria === 'docente') {
+        // Revert triggers to Cupo Disponible
+        n[seatId] = {
+          nombre_invitado: 'Cupo Disponible',
+          categoria: 'docente',
+          asignado_en: new Date().toISOString(),
+          registro_id: null
+        };
+      } else {
+        delete n[seatId];
+      }
       return n;
     });
 
@@ -200,28 +243,73 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
   function seatTooltip(seatId: string): string {
     const info = parseSeatId(seatId);
     const a = assignments[seatId];
+
+    if (a?.categoria === 'bloqueado') {
+      return `${info.display}\nReservado / No Disponible`;
+    }
+
+    // Teacher Slot
+    const isTeacherSlot = a?.categoria === 'docente' && (!a?.registro_id || a?.nombre_invitado === 'Cupo Disponible' || a?.nombre_invitado === 'Reservado');
+    if (isTeacherSlot) {
+      if (me.categoria === 'docente') return `${info.display}\n¡Cupo Disponible Docente! Clic para elegir`;
+      return `${info.display}\nReservado para Docentes`;
+    }
+
     const isMine = a?.registro_id === me.id;
     if (a) return `${a.nombre_invitado}${isMine ? ' (tú)' : ''}\n(${CATEGORY_CONFIG[a.categoria].label})\n${info.display}`;
     return `${info.display}\nDisponible`;
   }
 
+  // ... inside renderSeat loop
+  // Need to update the data-seat-id logic or ensure handleMapClick handles it.
+  // Better to control visual interaction via CSS class (cursor-pointer vs not allowed)
+
   function renderSeat(seatId: string) {
     const { numero } = parseSeatId(seatId);
     const isHovered = seatId === hoveredSeatId;
     const isMySeat = seatId === mySeatId;
+    const assignment = assignments[seatId];
+
+    // Determine if selectable
+    let isSelectable = false;
+    let isBlocked = false;
+
+    if (me.categoria === 'docente') {
+      const isTeacherSlot = assignment?.categoria === 'docente' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+      // Seat is selectable if it's an available teacher slot OR if it's already the user's seat
+      if (isTeacherSlot || isMySeat) {
+        isSelectable = true;
+      } else {
+        isBlocked = true;
+      }
+    } else {
+      if (!assignment || isMySeat) {
+        isSelectable = true;
+      } else {
+        isBlocked = true;
+      }
+    }
+
+    if (assignment?.categoria === 'bloqueado') isBlocked = true;
+
+
+    const isTeacherSlot = assignment?.categoria === 'docente' && !assignment?.registro_id;
 
     return (
       <div
         key={seatId}
         className={`${seatClass(seatId)} md:w-[28px] md:h-[34px] md:m-[3px] w-[32px] h-[38px] m-[4px] 
-          ${isHovered ? 'z-50 shadow-[0_0_20px_white] ring-2 ring-white/50 transition-all duration-200' : ''}
+          ${isHovered && !isBlocked ? 'z-50 shadow-[0_0_20px_white] ring-2 ring-white/50 transition-all duration-200 scale-110' : ''}
           ${isMySeat ? 'z-40 ring-2 ring-white shadow-[0_0_15px_rgba(255,255,255,0.8)] scale-110' : ''}
+          ${isTeacherSlot && !isMySeat ? (me.categoria === 'docente' ? 'opacity-80 animate-pulse' : 'opacity-40 grayscale-[0.2]') : ''}
+          ${!isSelectable && !isMySeat && !isTeacherSlot ? 'opacity-40 grayscale-[0.3] cursor-not-allowed' : (isSelectable ? 'cursor-pointer' : 'cursor-not-allowed')}
         `}
-        data-seat-id={seatId}
-        onMouseEnter={() => setHoveredSeatId(seatId)}
+        data-seat-id={isSelectable ? seatId : undefined}
+        onMouseEnter={() => isSelectable && setHoveredSeatId(seatId)}
         onMouseLeave={() => setHoveredSeatId(null)}
         style={isHovered || isMySeat ? { filter: isHovered ? 'brightness(1.5)' : 'brightness(1.1)', zIndex: isHovered ? 9999 : 50 } : undefined}
       >
+
         <span className="seat-tooltip">{seatTooltip(seatId)}</span>
         <span className="absolute inset-0 flex items-center justify-center text-[16px] font-black text-white pointer-events-none z-10 select-none drop-shadow-md shadow-black">
           {numero}
@@ -266,6 +354,8 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
   const stats = useMemo(() => {
     const entries = Object.values(assignments);
     const assigned = entries.filter(Boolean).length;
+    // Blocked seats are considered assigned for the purpose of "available" count, but maybe we want to distinguish them?
+    // For now, let's just say available = total - assigned (which includes blocked)
     return { total: totalSeats, assigned, available: totalSeats - assigned };
   }, [assignments, totalSeats]);
 
@@ -421,7 +511,7 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
               Referencia
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              {(['autoridad', 'docente', 'invitado', 'estudiante'] as const).map(cat => (
+              {(['docente', 'invitado', 'estudiante'] as const).map(cat => (
                 <div
                   key={cat}
                   className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.03] hover:border-white/10 transition-colors"
@@ -607,8 +697,13 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
       {selectedSeatId && (
         <PublicSeatModal
           seatId={selectedSeatId}
-          assignment={selectedAssignment}
+          assignment={assignments[selectedSeatId]}
           isMine={!!isMine}
+          isSelectable={
+            me.categoria === 'docente'
+              ? (assignments[selectedSeatId]?.categoria === 'docente' && (assignments[selectedSeatId]?.nombre_invitado === 'Cupo Disponible' || assignments[selectedSeatId]?.nombre_invitado === 'Reservado'))
+              : !assignments[selectedSeatId]
+          }
           onConfirm={handleAssign}
           onRelease={handleRelease}
           onClose={() => setSelectedSeatId(null)}

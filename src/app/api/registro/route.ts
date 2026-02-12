@@ -17,10 +17,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : '';
     const categoria = body.categoria;
+    const templateId = body.template_id; // Event ID
+
     const validCategories = ['autoridad', 'docente', 'invitado', 'estudiante'];
-    if (!nombre || !validCategories.includes(categoria)) {
+    if (!nombre || !validCategories.includes(categoria) || !templateId) {
       return NextResponse.json(
-        { error: 'Nombre y categoría válidos son requeridos' },
+        { error: 'Nombre, categoría y ID de evento son requeridos' },
         { status: 400 }
       );
     }
@@ -28,15 +30,16 @@ export async function POST(request: NextRequest) {
     const token = crypto.randomUUID();
     const supabase = createSupabaseServer();
 
-    // Validación ultra-estricta de nombre único (insensible a mayúsculas/minúsculas)
+    // Validación ultra-estricta de nombre único DENTRO del mismo evento
     const { count } = await supabase
       .from('registros')
       .select('id', { count: 'exact', head: true })
+      .eq('template_id', templateId)
       .ilike('nombre', nombre);
 
     if (count && count > 0) {
       return NextResponse.json(
-        { error: 'Este nombre ya se encuentra registrado. Por favor, añade un segundo apellido para diferenciarte.' },
+        { error: 'Este nombre ya se encuentra registrado en este evento.' },
         { status: 400 }
       );
     }
@@ -46,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('registros')
-      .insert({ nombre, categoria, token, codigo_acceso: accessCode })
+      .insert({ nombre, categoria, token, codigo_acceso: accessCode, template_id: templateId })
       .select('id, nombre, categoria, token, codigo_acceso')
       .single();
 

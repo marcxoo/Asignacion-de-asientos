@@ -13,6 +13,7 @@ interface PublicSeatModalProps {
   onRelease: () => void;
   onClose: () => void;
   loading?: boolean;
+  isSelectable?: boolean;
 }
 
 export function PublicSeatModal({
@@ -23,9 +24,12 @@ export function PublicSeatModal({
   onRelease,
   onClose,
   loading = false,
+  isSelectable = false,
 }: PublicSeatModalProps) {
   const info = parseSeatId(seatId);
-  const available = !assignment;
+
+  // A seat is available if it's explicitly selectable by the user
+  const available = isSelectable && !isMine;
 
   return (
     <div

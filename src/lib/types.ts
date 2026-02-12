@@ -1,4 +1,4 @@
-export type SeatCategory = 'autoridad' | 'docente' | 'invitado' | 'estudiante';
+export type SeatCategory = 'autoridad' | 'docente' | 'invitado' | 'estudiante' | 'bloqueado';
 
 export interface SeatAssignment {
   nombre_invitado: string;

@@ -46,13 +46,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: deleteError } = await supabase
-      .from('assignments')
-      .delete()
-      .eq('seat_id', seatId);
+    const { data: userData } = await supabase
+      .from('registros')
+      .select('categoria')
+      .eq('id', registro.id)
+      .single();
 
-    if (deleteError) {
-      console.error('Error releasing seat:', deleteError);
+    let updateError;
+    if (userData?.categoria === 'docente') {
+      // Revert to available slot for teachers
+      const { error } = await supabase
+        .from('assignments')
+        .update({
+          nombre_invitado: 'Cupo Disponible',
+          registro_id: null,
+          categoria: 'docente'
+        })
+        .eq('seat_id', seatId);
+      updateError = error;
+    } else {
+      // Normal delete for others
+      const { error } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('seat_id', seatId);
+      updateError = error;
+    }
+
+    if (updateError) {
+      console.error('Error releasing seat:', updateError);
       return NextResponse.json({ error: 'Error al liberar asiento' }, { status: 500 });
     }
 
