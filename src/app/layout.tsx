@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
-import { Fraunces, DM_Sans } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-});
-
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const poppins = Poppins({
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  variable: "--font-poppins",
   subsets: ["latin"],
 });
 
@@ -24,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${fraunces.variable} ${dmSans.variable} font-sans antialiased`}>
+      <body className={`${poppins.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>

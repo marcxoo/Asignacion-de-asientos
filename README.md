@@ -1,5 +1,33 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Graduación 2026 — Asignación de asientos
+
+- **Link público (invitados):** `/elegir` — Registro (nombre + categoría) y elección de asiento.
+- **Panel organizadores:** `/` — Login con contraseña; `/mapa` — Mapa y asignación manual.
+
+## Configuración
+
+1. **Variables de entorno**  
+   Copia `.env.example` a `.env.local` y rellena:
+   - `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Supabase → Settings → API).
+   - `SUPABASE_SERVICE_ROLE_KEY` (Settings → API → service_role, solo servidor).
+   - Opcional: `ACCESS_PASSWORD` para el login de organizadores.
+
+2. **Migración en Supabase**  
+   Crea la tabla `registros` y la columna `registro_id` en `assignments`:
+   - **Opción A:** En Supabase → SQL Editor, pega y ejecuta el contenido de `supabase/migrations/20260211000000_registros_y_registro_id.sql`.
+   - **Opción B:** Añade en `.env.local` la `DATABASE_URL` (Settings → Database → Connection string URI) y ejecuta:
+     ```bash
+     npm run db:migrate
+     ```
+
+3. **Arrancar**
+   ```bash
+   npm run dev
+   ```
+   - Invitados: [http://localhost:3000/elegir](http://localhost:3000/elegir)  
+   - Organizadores: [http://localhost:3000](http://localhost:3000) (contraseña) → [http://localhost:3000/mapa](http://localhost:3000/mapa)
+
 ## Getting Started
 
 First, run the development server:

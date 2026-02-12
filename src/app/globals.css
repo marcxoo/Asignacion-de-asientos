@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #222223;
-  --color-foreground: #f5f0ea;
-  --color-navy: #002E45;
-  --color-navy-light: #004263;
+  --color-background: #111111;
+  --color-foreground: #fcfcfc;
+  --color-navy: #002233;
+  --color-navy-light: #00334d;
   --color-orange: #FF6900;
   --color-orange-hover: #e55e00;
-  --font-sans: var(--font-dm-sans);
-  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-poppins);
+  --font-display: var(--font-poppins);
 }
 
 :root {
@@ -37,9 +37,6 @@ body::after {
 
 /* ── Realistic Seat Base ── */
 .seat {
-  width: 28px;
-  height: 34px;
-  margin: 3px;
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease-out;
   will-change: transform;
@@ -48,9 +45,11 @@ body::after {
   /* Seat shape */
   flex-shrink: 0;
 
-  /* Chair Back (Default Red) */
-  background: linear-gradient(180deg, #991b1b 0%, #7f1d1d 100%);
-  border-top: 4px solid #450a0a;
+  /* Chair Back (Default Neutral/Slate) */
+  background: linear-gradient(180deg, #475569 0%, #334155 100%);
+  /* Slate 600-700 */
+  border-top: 4px solid #1e293b;
+  /* Slate 800 */
   /* Headrest/Top padding */
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.5),
@@ -84,14 +83,15 @@ body::after {
   left: 1px;
   right: 1px;
   height: 14px;
-  background: linear-gradient(180deg, #b91c1c 0%, #991b1b 100%);
+  background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+  /* Slate 500-600 */
   border-radius: 2px 2px 6px 6px;
   box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Hover Effects */
 .seat:hover {
-  transform: scale(1.4) translateY(-4px);
+  transform: scale(1.15) translateY(-4px);
   z-index: 50;
   box-shadow:
     0 10px 25px rgba(0, 0, 0, 0.7),
@@ -101,45 +101,68 @@ body::after {
 
 /* ── Status Variants ── */
 
-/* Available (Default Red/Black theme) */
-.seat-disponible {
-  background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
-  border-top-color: #450a0a;
+/* Available (Neutral Slate/Metallic) */
+.seat.seat-disponible {
+  background: linear-gradient(180deg, #475569 0%, #334155 100%);
+  /* Slate 600-700 */
+  border-top-color: #1e293b;
+  /* Slate 800 */
 }
 
-.seat-disponible .seat-cushion {
-  background: linear-gradient(180deg, #dc2626 0%, #991b1b 100%);
+.seat.seat-disponible .seat-cushion {
+  background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+  /* Slate 500-600 */
 }
 
-/* Assigned (Occupied) - No dimming, vibrant colors */
-.seat-autoridad {
-  background: linear-gradient(180deg, #9333ea 0%, #7e22ce 100%);
-  /* Brighter Purple */
-  border-top-color: #581c87;
+/* Authority (Royal Indigo/Gold accent if needed, but keeping color logic) */
+.seat.seat-autoridad {
+  background: linear-gradient(180deg, #4f46e5 0%, #312e81 100%);
+  /* Indigo 600-900 */
+  border-top-color: #1e1b4b;
 }
 
-.seat-autoridad .seat-cushion {
-  background: linear-gradient(180deg, #a855f7 0%, #9333ea 100%);
+.seat.seat-autoridad .seat-cushion {
+  background: linear-gradient(180deg, #6366f1 0%, #4338ca 100%);
 }
 
-.seat-docente {
-  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
-  /* Brighter Blue */
-  border-top-color: #0c4a6e;
+/* Teacher (Azure / Ocean Blue) */
+.seat.seat-docente {
+  background: linear-gradient(180deg, #0ea5e9 0%, #075985 100%);
+  /* Sky 500-800 */
+  border-top-color: #082f49;
 }
 
-.seat-docente .seat-cushion {
-  background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%);
+.seat.seat-docente .seat-cushion {
+  background: linear-gradient(180deg, #38bdf8 0%, #0369a1 100%);
 }
 
-.seat-invitado {
-  background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
-  /* Brighter Green */
-  border-top-color: #14532d;
+/* Guest (Emerald / Forest Green) */
+.seat.seat-invitado {
+  background: linear-gradient(180deg, #10b981 0%, #064e3b 100%);
+  /* Emerald 500-900 */
+  border-top-color: #022c22;
 }
 
-.seat-invitado .seat-cushion {
-  background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+.seat.seat-invitado .seat-cushion {
+  background: linear-gradient(180deg, #34d399 0%, #059669 100%);
+}
+
+/* Student (Orange / Sunset) */
+.seat.seat-estudiante {
+  background: linear-gradient(180deg, #f97316 0%, #c2410c 100%);
+  /* Orange 500-700 */
+  border-top-color: #7c2d12;
+}
+
+.seat.seat-estudiante .seat-cushion {
+  background: linear-gradient(180deg, #fb923c 0%, #ea580c 100%);
+}
+
+/* Higher contrast for numbers */
+.seat span.absolute {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 /* Selected */
@@ -154,28 +177,28 @@ body::after {
   position: absolute;
   bottom: 100%;
   left: 50%;
-  transform: translateX(-50%) translateY(-8px);
+  transform: translateX(-50%) translateY(-12px);
   width: max-content;
-  background: rgba(0, 46, 69, 0.95);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 29, 45, 0.98);
+  backdrop-filter: blur(8px);
   color: white;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
   white-space: pre-line;
-  line-height: 1.4;
+  line-height: 1.3;
   pointer-events: none;
   box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.3),
-    0 2px 4px -1px rgba(0, 0, 0, 0.1),
+    0 10px 15px -3px rgba(0, 0, 0, 0.5),
+    0 4px 6px -2px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 100;
-  min-width: 120px;
+  min-width: 100px;
   text-align: center;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   visibility: hidden;
 }
 
