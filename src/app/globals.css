@@ -261,14 +261,14 @@ body::after {
     transform: scale(1);
     opacity: 1;
     border-width: 4px;
-    border-color: rgba(255, 105, 0, 0.8);
+    border-color: var(--beacon-color, #FF6900);
   }
 
   100% {
     transform: scale(2.2);
     opacity: 0;
     border-width: 0px;
-    border-color: rgba(255, 105, 0, 0);
+    border-color: transparent;
   }
 }
 
@@ -281,7 +281,7 @@ body::after {
   border-radius: 4px 4px 8px 8px;
   /* Same as seat */
   border-style: solid;
-  border-color: #FF6900;
+  border-color: var(--beacon-color, #FF6900);
   z-index: 100;
   pointer-events: none;
   /* Let clicks pass through */

@@ -229,8 +229,23 @@ export function PublicAuditoriumView({ me }: PublicAuditoriumViewProps) {
         <div className="seat-cushion" />
         {isMySeat && (
           <>
-            <div className="beacon-ring" />
-            <div className="beacon-ring" style={{ animationDelay: '0.5s' }} />
+            <div
+              className="beacon-ring"
+              style={
+                {
+                  '--beacon-color': CATEGORY_CONFIG[me.categoria].hex,
+                } as React.CSSProperties
+              }
+            />
+            <div
+              className="beacon-ring"
+              style={
+                {
+                  '--beacon-color': CATEGORY_CONFIG[me.categoria].hex,
+                  animationDelay: '0.5s',
+                } as React.CSSProperties
+              }
+            />
           </>
         )}
       </div>
