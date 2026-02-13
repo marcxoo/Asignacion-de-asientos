@@ -63,23 +63,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Verificar si el usuario ya tiene OTRO asiento asignado en ESTE evento y liberarlo/revertirlo
-    if (registro.categoria === 'docente') {
-      await supabase
-        .from('assignments')
-        .update({
-          nombre_invitado: 'Cupo Disponible',
-          registro_id: null,
-          categoria: 'docente'
-        })
-        .eq('registro_id', registro.id)
-        .eq('template_id', templateId);
-    } else {
-      await supabase
-        .from('assignments')
-        .delete()
-        .eq('registro_id', registro.id)
-        .eq('template_id', templateId);
-    }
+    await supabase
+      .from('assignments')
+      .update({
+        nombre_invitado: 'Cupo Disponible',
+        registro_id: null,
+        categoria: registro.categoria
+      })
+      .eq('registro_id', registro.id)
+      .eq('template_id', templateId);
 
     // 5. Asignar el nuevo asiento
     const { error: insertError } = await supabase.from('assignments').insert({

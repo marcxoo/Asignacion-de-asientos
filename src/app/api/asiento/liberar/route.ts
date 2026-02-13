@@ -52,26 +52,14 @@ export async function POST(request: NextRequest) {
       .eq('id', registro.id)
       .single();
 
-    let updateError;
-    if (userData?.categoria === 'docente') {
-      // Revert to available slot for teachers
-      const { error } = await supabase
-        .from('assignments')
-        .update({
-          nombre_invitado: 'Cupo Disponible',
-          registro_id: null,
-          categoria: 'docente'
-        })
-        .eq('seat_id', seatId);
-      updateError = error;
-    } else {
-      // Normal delete for others
-      const { error } = await supabase
-        .from('assignments')
-        .delete()
-        .eq('seat_id', seatId);
-      updateError = error;
-    }
+    const { error: updateError } = await supabase
+      .from('assignments')
+      .update({
+        nombre_invitado: 'Cupo Disponible',
+        registro_id: null,
+        categoria: userData?.categoria || 'docente'
+      })
+      .eq('seat_id', seatId);
 
     if (updateError) {
       console.error('Error releasing seat:', updateError);

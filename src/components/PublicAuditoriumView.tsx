@@ -136,17 +136,13 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
       // Liberar cualquier asiento anterior que tuviera este usuario
       Object.keys(next).forEach(key => {
         if (next[key]?.registro_id === me.id) {
-          if (me.categoria === 'docente') {
-            // Revertir a Cupo Disponible
-            next[key] = {
-              nombre_invitado: 'Cupo Disponible',
-              categoria: 'docente',
-              asignado_en: new Date().toISOString(),
-              registro_id: null // Ensure no one owns it
-            };
-          } else {
-            delete next[key];
-          }
+          // Revertir a Cupo Disponible manteniendo la categoría del usuario
+          next[key] = {
+            nombre_invitado: 'Cupo Disponible',
+            categoria: me.categoria,
+            asignado_en: new Date().toISOString(),
+            registro_id: null
+          };
         }
       });
       // Asignar el nuevo
@@ -200,17 +196,13 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
     const seatId = selectedSeatId;
     setAssignments(prev => {
       const n = { ...prev };
-      if (me.categoria === 'docente') {
-        // Revert triggers to Cupo Disponible
-        n[seatId] = {
-          nombre_invitado: 'Cupo Disponible',
-          categoria: 'docente',
-          asignado_en: new Date().toISOString(),
-          registro_id: null
-        };
-      } else {
-        delete n[seatId];
-      }
+      // Revert triggers to Cupo Disponible
+      n[seatId] = {
+        nombre_invitado: 'Cupo Disponible',
+        categoria: me.categoria,
+        asignado_en: new Date().toISOString(),
+        registro_id: null
+      };
       return n;
     });
 
