@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, Fragment, useEffect } from 'react';
+import { useState, useCallback, useMemo, Fragment, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { SeatState, SeatCategory } from '@/lib/types';
@@ -45,6 +45,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
   // ── State ──
   const [assignments, setAssignments] = useState<SeatState>({});
   const [loading, setLoading] = useState(false);
+  const isInitialLoad = useRef(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
@@ -63,12 +64,23 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
   useEffect(() => {
     // 1. Fetch initial data
     const fetchAssignments = async () => {
-      if (!activeTemplateId) return;
-      const { data, error } = await supabase.from('assignments').select('*').eq('template_id', activeTemplateId);
-      if (error) {
-        console.error('Error fetching assignments:', error);
+      if (!activeTemplateId) {
+        setAssignments({});
+        isInitialLoad.current = false;
         return;
       }
+
+      setLoading(true);
+      isInitialLoad.current = true; // Still loading the new template
+
+      const { data, error } = await supabase.from('assignments').select('*').eq('template_id', activeTemplateId);
+
+      if (error) {
+        console.error('Error fetching assignments:', error);
+        setLoading(false);
+        return;
+      }
+
       const newAssignments: SeatState = {};
       (data as AssignmentRow[])?.forEach((row) => {
         newAssignments[row.seat_id] = {
@@ -78,7 +90,10 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
           asignado_en: row.assigned_at
         };
       });
+
       setAssignments(newAssignments);
+      isInitialLoad.current = false; // Successfully loaded
+      setLoading(false);
     };
 
     fetchAssignments();
@@ -117,9 +132,13 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
 
   // ── Auto-save logic ──
   useEffect(() => {
-    if (!activeTemplateName) return;
+    // DON'T auto-save if we are still fetching the initial data for this template
+    if (!activeTemplateName || isInitialLoad.current) return;
 
     const timer = setTimeout(() => {
+      // Re-check loading ref before actually executing save
+      if (isInitialLoad.current) return;
+
       const data = Object.entries(assignments)
         .filter(([_, a]) => !!a)
         .map(([id, a]) => ({
@@ -136,7 +155,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [assignments, activeTemplateName, onSaveTemplate]);
+  }, [assignments, activeTemplateName, activeTemplateId, onSaveTemplate]);
 
   // ── Handlers ──
   const handleSaveToTemplate = async (name: string) => {

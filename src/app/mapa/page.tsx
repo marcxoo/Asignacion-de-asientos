@@ -23,14 +23,7 @@ export default function MapaPage() {
     setViewMode('MAP');
   };
 
-  const handleNewTemplate = async () => {
-    // 1. Clear current assignments
-    const { error: delError } = await supabase.from('assignments').delete().neq('seat_id', 'placeholder__');
-    if (delError) {
-      console.error('Error clearing:', delError);
-      return;
-    }
-
+  const handleNewTemplate = () => {
     setActiveTemplate(null);
     setViewMode('MAP');
   };
