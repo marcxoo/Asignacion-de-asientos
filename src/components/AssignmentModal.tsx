@@ -22,6 +22,7 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
   const [nombre, setNombre] = useState(assignment?.nombre_invitado || '');
   const [categoria, setCategoria] = useState<SeatCategory>(assignment?.categoria || 'invitado');
   const info = parseSeatId(seatId);
+  const isBulk = seatId === 'bulk-selection';
 
   const activeConfig = CATEGORY_CONFIG[categoria];
   const activeColor = activeConfig.hex || '#10b981';
@@ -38,8 +39,18 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
       finalName = TEACHER_SLOT_LABEL;
     }
 
-    if (finalName) {
-      onAssign(seatId, finalName, categoria);
+    if (finalName || isBulk) {
+      // For bulk, empty name means "don't assign name"? Or just assign "Reservado"?
+      // Usually, bulk assign needs a category at minimum. 
+      // If name is empty in bulk and cat is docente/block, auto-fill.
+      // If name is empty and cat is invited -> let it pass? "Invitado"?
+      // Let's force name if needed.
+      if (!finalName && isBulk && !['bloqueado', 'autoridad', 'docente'].includes(categoria)) {
+        // For generic bulk, if no name provided, use category label? Or allow empty?
+        // Existing logic allows empty if not trimmed? No, logic above requires finalName.
+        // Let's default to "Asignación Masiva" or just let user type.
+      }
+      onAssign(seatId, finalName || 'Invitado', categoria);
     }
   };
 
@@ -62,18 +73,20 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
           <div className="flex justify-between items-start mb-10">
             <div>
               <h2 className="text-3xl font-black text-white tracking-tight leading-none mb-3">
-                {assignment ? 'Editar Lugar' : 'Asignar Lugar'}
+                {isBulk ? 'Asignación Masiva' : (assignment ? 'Editar Lugar' : 'Asignar Lugar')}
               </h2>
               <div className="flex items-center gap-3">
                 <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-xl text-xs font-mono font-bold text-slate-400">
-                  {info.display}
+                  {isBulk ? 'Varios Asientos Seleccionados' : info.display}
                 </span>
-                <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-xl">
-                  <div className={`w-2 h-2 rounded-full ${assignment ? 'bg-orange animate-pulse' : 'bg-emerald-500'}`} />
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${assignment ? 'text-orange' : 'text-emerald-500'}`}>
-                    {assignment ? 'Ocupado' : 'Disponible'}
-                  </span>
-                </div>
+                {!isBulk && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-xl">
+                    <div className={`w-2 h-2 rounded-full ${assignment ? 'bg-orange animate-pulse' : 'bg-emerald-500'}`} />
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${assignment ? 'text-orange' : 'text-emerald-500'}`}>
+                      {assignment ? 'Ocupado' : 'Disponible'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             <button

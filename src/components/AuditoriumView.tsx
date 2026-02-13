@@ -14,7 +14,8 @@ import {
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
   ClipboardDocumentIcon,
-  XMarkIcon
+  XMarkIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
@@ -41,8 +42,22 @@ interface AuditoriumViewProps {
 }
 
 export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, onSaveTemplate }: AuditoriumViewProps) {
+  // ── State ──
   const [assignments, setAssignments] = useState<SeatState>({});
   const [loading, setLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  // Template State
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+
+  const [selectedSeatIds, setSelectedSeatIds] = useState<Set<string>>(new Set());
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   // ── Supabase Realtime & Fetch ──
   useEffect(() => {
@@ -98,23 +113,13 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
-
-  const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
-
-  // Template State
-  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const [newTemplateName, setNewTemplateName] = useState('');
+  }, [activeTemplateId]);
 
   // ── Auto-save logic ──
   useEffect(() => {
     if (!activeTemplateName) return;
 
     const timer = setTimeout(() => {
-      // Map local state back to row format
       const data = Object.entries(assignments)
         .filter(([_, a]) => !!a)
         .map(([id, a]) => ({
@@ -128,12 +133,12 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
       if (onSaveTemplate) {
         onSaveTemplate(activeTemplateName, data);
       }
-    }, 2000); // Debounce for 2 seconds
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [assignments, activeTemplateName, onSaveTemplate]);
 
-  // Handle Save
+  // ── Handlers ──
   const handleSaveToTemplate = async (name: string) => {
     const data = Object.entries(assignments)
       .filter(([_, a]) => !!a)
@@ -153,7 +158,6 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
 
   const handleSaveClick = () => {
     if (activeTemplateName) {
-      // Direct save if already in a template
       handleSaveToTemplate(activeTemplateName);
     } else {
       setNewTemplateName('');
@@ -167,11 +171,8 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     setIsSaveModalOpen(false);
   };
 
-  // Removed internal handlers for load/delete since they are in parent
-
-
   const handleExport = () => {
-    window.location.href = '/api/admin/export';
+    window.location.href = `/api/admin/export?template_id=${activeTemplateId}`;
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,6 +182,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     setImporting(true);
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('template_id', activeTemplateId || '');
 
     try {
       const res = await fetch('/api/admin/import', {
@@ -200,7 +202,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     }
   };
 
-  // ── Stats ──
+  // ── Stats & Search ──
   const totalSeats = useMemo(() => {
     return ROWS.reduce((acc, row) => acc + (row.left || 0) + (row.right || 0) + (row.center || 0), 0);
   }, []);
@@ -220,7 +222,6 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     };
   }, [assignments, totalSeats]);
 
-  // ── Search ──
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
@@ -229,18 +230,43 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
       .map(([seatId, a]) => ({ seatId, ...parseSeatId(seatId), assignment: a! }));
   }, [assignments, searchQuery]);
 
-  // ── Handlers ──
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isSidebarCollapsed] = useState(false);
-
   const handleMapClick = useCallback((e: React.MouseEvent) => {
     const target = (e.target as HTMLElement).closest('[data-seat-id]') as HTMLElement | null;
-    if (!target) return;
-    setSelectedSeatId(target.dataset.seatId!);
+
+    // If clicking empty space (not a seat), clear selection
+    if (!target) {
+      if (!e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        setSelectedSeatIds(new Set());
+        setSelectedSeatId(null);
+      }
+      return;
+    }
+
+    const clickedSeatId = target.dataset.seatId!;
+
+    // Case 1: Meta/Ctrl + Click (Toggle Selection)
+    if (e.metaKey || e.ctrlKey) {
+      setSelectedSeatIds(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(clickedSeatId)) {
+          newSet.delete(clickedSeatId);
+        } else {
+          newSet.add(clickedSeatId);
+        }
+        return newSet;
+      });
+      setSelectedSeatId(null);
+      return;
+    }
+
+    // Case 2: Normal Click (Single Selection)
+    setSelectedSeatIds(new Set([clickedSeatId]));
+    setSelectedSeatId(clickedSeatId); // Opens modal
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, []);
+  }, [setIsSidebarOpen, setSelectedSeatId, setSelectedSeatIds]);
+
 
   const handleAssign = async (seatId: string, nombre: string, categoria: SeatCategory) => {
     setLoading(true);
@@ -312,6 +338,84 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     setLoading(false);
   };
 
+  // ── Bulk Handlers ──
+
+  const handleBulkAssign = async (seatId: string, nombre: string, categoria: SeatCategory) => {
+    // seatId is ignored in bulk mode
+    if (selectedSeatIds.size === 0) return;
+    setLoading(true);
+    const now = new Date().toISOString();
+
+    // 1. Optimistic Update
+    setAssignments(prev => {
+      const next = { ...prev };
+      selectedSeatIds.forEach(id => {
+        next[id] = {
+          nombre_invitado: nombre,
+          categoria: categoria,
+          asignado_en: now,
+          registro_id: null // Admin assignments don't have user registration
+        };
+      });
+      return next;
+    });
+    setIsBulkModalOpen(false);
+
+    // 2. Supabase Upsert
+    const updates = Array.from(selectedSeatIds).map(id => ({
+      seat_id: id,
+      nombre_invitado: nombre,
+      categoria: categoria,
+      assigned_at: now,
+      template_id: activeTemplateId
+    }));
+
+    const { error } = await supabase.from('assignments').upsert(updates);
+
+    if (error) {
+      console.error('Error bulk assigning:', error);
+      alert('Error al guardar asignación masiva. Recargando...');
+      window.location.reload();
+    } else {
+      if (activeTemplateName) handleSaveToTemplate(activeTemplateName);
+      setSelectedSeatIds(new Set());
+    }
+    setLoading(false);
+  };
+
+  const handleBulkRelease = async () => {
+    if (selectedSeatIds.size === 0) return;
+    if (!confirm(`¿Liberar ${selectedSeatIds.size} asientos seleccionados?`)) return;
+
+    setLoading(true);
+
+    // 1. Optimistic Update
+    setAssignments(prev => {
+      const next = { ...prev };
+      selectedSeatIds.forEach(id => {
+        delete next[id];
+      });
+      return next;
+    });
+
+    // 2. Supabase Delete
+    const { error } = await supabase
+      .from('assignments')
+      .delete()
+      .in('seat_id', Array.from(selectedSeatIds))
+      .eq('template_id', activeTemplateId);
+
+    if (error) {
+      console.error('Error bulk releasing:', error);
+      alert('Error al liberar asientos. Recargando...');
+      window.location.reload();
+    } else {
+      if (activeTemplateName) handleSaveToTemplate(activeTemplateName);
+      setSelectedSeatIds(new Set());
+    }
+    setLoading(false);
+  };
+
   // ── Seat rendering helpers ──
   function seatClass(seatId: string): string {
     const a = assignments[seatId];
@@ -337,11 +441,15 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
   function renderSeat(seatId: string) {
     const { numero } = parseSeatId(seatId);
     const isHovered = seatId === hoveredSeatId;
+    const isSelected = selectedSeatIds.has(seatId);
 
     return (
       <div
         key={seatId}
-        className={`${seatClass(seatId)} w-[28px] h-[34px] m-[3px] ${isHovered ? 'z-50 shadow-[0_0_20px_white] ring-2 ring-white/50 transition-all duration-200' : ''}`}
+        className={`${seatClass(seatId)} w-[28px] h-[34px] m-[3px] 
+            ${isHovered ? 'z-50 shadow-[0_0_20px_white] ring-2 ring-white/50 transition-all duration-200' : ''}
+            ${isSelected ? 'ring-2 ring-orange z-40 brightness-110' : ''}
+        `}
         data-seat-id={seatId}
         style={isHovered ? { filter: 'brightness(1.5)', zIndex: 9999 } : undefined}
       >
@@ -785,7 +893,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
 
       {/* ── Assignment Modal ── */}
       {
-        selectedSeatId && (
+        selectedSeatId && selectedSeatIds.size <= 1 && (
           <AssignmentModal
             seatId={selectedSeatId}
             assignment={assignments[selectedSeatId]}
@@ -796,6 +904,66 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
           />
         )
       }
+
+      {/* ── Bulk Assignment Modal ── */}
+      {
+        selectedSeatIds.size > 0 && isBulkModalOpen && (
+          <AssignmentModal
+            seatId="bulk-selection"
+            assignment={undefined} // No pre-fill for bulk
+            onAssign={handleBulkAssign}
+            onRelease={() => { }} // Not used in bulk assign flow
+            onClose={() => setIsBulkModalOpen(false)}
+            loading={loading}
+          />
+        )
+      }
+
+      {/* ── Bulk Action Bar ── */}
+      {selectedSeatIds.size > 0 && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[70] bg-[#001D2D] border border-white/20 rounded-2xl shadow-2xl p-4 flex items-center gap-4"
+        >
+          <div className="flex items-center gap-3 pr-4 border-r border-white/10">
+            <span className="bg-orange text-white text-xs font-black px-2 py-1 rounded-lg">
+              {selectedSeatIds.size}
+            </span>
+            <span className="text-white text-xs font-bold uppercase tracking-wider">
+              Seleccionados
+            </span>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsBulkModalOpen(true)}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-2"
+            >
+              <UserCircleIcon className="w-4 h-4" />
+              Asignar Lote
+            </button>
+
+            <button
+              onClick={handleBulkRelease}
+              className="px-4 py-2 bg-white/5 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-white/5 hover:border-red-500/30 text-xs font-bold rounded-xl transition-colors flex items-center gap-2"
+            >
+              <TrashIcon className="w-4 h-4" />
+              Liberar
+            </button>
+
+            <button
+              onClick={() => {
+                setSelectedSeatIds(new Set());
+                setSelectedSeatId(null);
+              }}
+              className="px-3 py-2 text-slate-400 hover:text-white transition-colors"
+            >
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Save Template Modal */}
       {isSaveModalOpen && (
@@ -828,6 +996,6 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
           </div>
         </div>
       )}
-    </div >
+    </div>
   );
 }
