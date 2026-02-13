@@ -41,18 +41,24 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existing) {
-      const isTeacherSlot = existing.categoria === 'docente' && (existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
+      const isTeacherSlot = existing.categoria === 'docente' && (!existing.registro_id || existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
+      const isGuestSlot = existing.categoria === 'invitado' && (!existing.registro_id || existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
+      const isStudentSlot = existing.categoria === 'estudiante' && (!existing.registro_id || existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
 
-      // If it's NOT a teacher slot, OR if it's already assigned to someone, block it
-      if (existing.registro_id || !isTeacherSlot || registro.categoria !== 'docente') {
+      const isSlotForMe =
+        (registro.categoria === 'docente' && isTeacherSlot) ||
+        (registro.categoria === 'invitado' && isGuestSlot) ||
+        (registro.categoria === 'estudiante' && isStudentSlot);
+
+      if (existing.registro_id || !isSlotForMe) {
         return NextResponse.json(
-          { error: 'El asiento ya está ocupado' },
+          { error: 'El asiento ya está ocupado o no corresponde a tu categoría' },
           { status: 409 }
         );
       }
 
-      // If we reach here, it's an available teacher slot and the user is a teacher.
-      // We will delete it first to avoid conflict with the insert below.
+      // If we reach here, it's an available slot of the correct category.
+      // We delete it first to avoid unique constraint conflict on insert.
       await supabase.from('assignments').delete().eq('seat_id', seatId).eq('template_id', templateId);
     }
 
