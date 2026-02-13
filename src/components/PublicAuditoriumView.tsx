@@ -99,14 +99,18 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
     const assignment = assignments[seatId];
 
     // Logic for Teachers
+    const isTeacherSlot = assignment?.categoria === 'docente' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+    const isGuestSlot = assignment?.categoria === 'invitado' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+    const isStudentSlot = assignment?.categoria === 'estudiante' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+
     if (me.categoria === 'docente') {
-      const isTeacherSlot = assignment?.categoria === 'docente' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
-      console.log('Teacher click check:', { seatId, category: assignment?.categoria, name: assignment?.nombre_invitado, isTeacherSlot });
-      if (!isTeacherSlot) return; // Teachers can ONLY select specific slots
-    }
-    // Logic for Others (Students/Guests)
-    else {
-      if (assignment) return; // Others can ONLY select empty seats
+      if (!isTeacherSlot) return;
+    } else if (me.categoria === 'invitado') {
+      if (assignment && !isGuestSlot) return;
+    } else if (me.categoria === 'estudiante') {
+      if (assignment && !isStudentSlot) return;
+    } else {
+      if (assignment) return;
     }
 
     setSelectedSeatId(seatId);
@@ -274,26 +278,27 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
     let isSelectable = false;
     let isBlocked = false;
 
+    const isTeacherSlot = assignment?.categoria === 'docente' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+    const isGuestSlot = assignment?.categoria === 'invitado' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+    const isStudentSlot = assignment?.categoria === 'estudiante' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+
     if (me.categoria === 'docente') {
-      const isTeacherSlot = assignment?.categoria === 'docente' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
-      // Seat is selectable if it's an available teacher slot OR if it's already the user's seat
-      if (isTeacherSlot || isMySeat) {
-        isSelectable = true;
-      } else {
-        isBlocked = true;
-      }
+      if (isTeacherSlot || isMySeat) isSelectable = true;
+      else isBlocked = true;
+    } else if (me.categoria === 'invitado') {
+      if (!assignment || isGuestSlot || isMySeat) isSelectable = true;
+      else isBlocked = true;
+    } else if (me.categoria === 'estudiante') {
+      if (!assignment || isStudentSlot || isMySeat) isSelectable = true;
+      else isBlocked = true;
     } else {
-      if (!assignment || isMySeat) {
-        isSelectable = true;
-      } else {
-        isBlocked = true;
-      }
+      if (!assignment || isMySeat) isSelectable = true;
+      else isBlocked = true;
     }
 
     if (assignment?.categoria === 'bloqueado') isBlocked = true;
 
-
-    const isTeacherSlot = assignment?.categoria === 'docente' && !assignment?.registro_id;
+    const isSlot = isTeacherSlot || isGuestSlot || isStudentSlot;
 
     return (
       <div
@@ -301,8 +306,8 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
         className={`${seatClass(seatId)} md:w-[28px] md:h-[34px] md:m-[3px] w-[32px] h-[38px] m-[4px] 
           ${isHovered && !isBlocked ? 'z-50 shadow-[0_0_20px_white] ring-2 ring-white/50 transition-all duration-200 scale-110' : ''}
           ${isMySeat ? 'z-40 ring-2 ring-white shadow-[0_0_15px_rgba(255,255,255,0.8)] scale-110' : ''}
-          ${isTeacherSlot && !isMySeat ? (me.categoria === 'docente' ? 'opacity-80 animate-pulse' : 'opacity-40 grayscale-[0.2]') : ''}
-          ${!isSelectable && !isMySeat && !isTeacherSlot ? 'opacity-40 grayscale-[0.3] cursor-not-allowed' : (isSelectable ? 'cursor-pointer' : 'cursor-not-allowed')}
+          ${isSlot && !isMySeat ? (isSelectable ? 'opacity-80 animate-pulse' : 'opacity-40 grayscale-[0.2]') : ''}
+          ${!isSelectable && !isMySeat && !isSlot ? 'opacity-40 grayscale-[0.3] cursor-not-allowed' : (isSelectable ? 'cursor-pointer' : 'cursor-not-allowed')}
         `}
         data-seat-id={isSelectable ? seatId : undefined}
         onMouseEnter={() => isSelectable && setHoveredSeatId(seatId)}
@@ -361,6 +366,25 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
 
   const selectedAssignment = selectedSeatId ? assignments[selectedSeatId] : undefined;
   const isMine = selectedSeatId && selectedAssignment?.registro_id === me.id;
+
+  const isModalSelectable = useMemo(() => {
+    if (!selectedSeatId) return false;
+    const assignment = assignments[selectedSeatId];
+    const isTeacherSlot = assignment?.categoria === 'docente' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+    const isGuestSlot = assignment?.categoria === 'invitado' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+    const isStudentSlot = assignment?.categoria === 'estudiante' && (!assignment?.registro_id || assignment?.nombre_invitado === 'Cupo Disponible' || assignment?.nombre_invitado === 'Reservado');
+    const isMySeat = selectedSeatId === mySeatId;
+
+    if (me.categoria === 'docente') {
+      return isTeacherSlot || isMySeat;
+    } else if (me.categoria === 'invitado') {
+      return !assignment || isGuestSlot || isMySeat;
+    } else if (me.categoria === 'estudiante') {
+      return !assignment || isStudentSlot || isMySeat;
+    } else {
+      return !assignment || isMySeat;
+    }
+  }, [selectedSeatId, assignments, me.categoria, mySeatId]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -699,11 +723,7 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
           seatId={selectedSeatId}
           assignment={assignments[selectedSeatId]}
           isMine={!!isMine}
-          isSelectable={
-            me.categoria === 'docente'
-              ? (assignments[selectedSeatId]?.categoria === 'docente' && (assignments[selectedSeatId]?.nombre_invitado === 'Cupo Disponible' || assignments[selectedSeatId]?.nombre_invitado === 'Reservado'))
-              : !assignments[selectedSeatId]
-          }
+          isSelectable={isModalSelectable}
           onConfirm={handleAssign}
           onRelease={handleRelease}
           onClose={() => setSelectedSeatId(null)}
