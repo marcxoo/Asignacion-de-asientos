@@ -7,15 +7,16 @@ import { supabase } from '@/lib/supabase';
 
 type ViewMode = 'SELECTOR' | 'MAP';
 
+interface TemplateRef {
+  id: string;
+  name: string;
+}
+
 export default function MapaPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('SELECTOR');
   const [activeTemplate, setActiveTemplate] = useState<{ id: string; name: string } | null>(null);
 
-  const handleContinue = () => {
-    setViewMode('MAP');
-  };
-
-  const handleSelectTemplate = async (template: any) => {
+  const handleSelectTemplate = async (template: TemplateRef) => {
     // Just open the template. 
     // The AuditoriumView will fetch the LIVE data from 'assignments' table filtered by template.id
     // We do NOT want to overwrite live data with the old snapshot stored in template.data
@@ -28,7 +29,7 @@ export default function MapaPage() {
     setViewMode('MAP');
   };
 
-  const handleSaveTemplate = async (name: string, data: any[]) => {
+  const handleSaveTemplate = async (name: string, data: unknown[]) => {
     const trimmedName = name.trim();
     let result;
 
@@ -57,7 +58,6 @@ export default function MapaPage() {
       <AdminTemplateSelector
         onSelectTemplate={handleSelectTemplate}
         onNewTemplate={handleNewTemplate}
-        onContinue={handleContinue}
       />
     );
   }

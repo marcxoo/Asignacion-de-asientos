@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { SeatState, SeatCategory, Registro } from '@/lib/types';
-import { ROWS, parseSeatId, CATEGORY_CONFIG, TEACHER_SLOT_LABEL } from '@/lib/seats-data';
+import { ROWS, parseSeatId, CATEGORY_CONFIG } from '@/lib/seats-data';
 import { PublicSeatModal } from './PublicSeatModal';
 import { supabase } from '@/lib/supabase';
 import {
@@ -23,9 +23,10 @@ interface PublicAuditoriumViewProps {
   me: Registro;
   templateId: string;
   templateName?: string;
+  invitationToken?: string;
 }
 
-export function PublicAuditoriumView({ me, templateId, templateName }: PublicAuditoriumViewProps) {
+export function PublicAuditoriumView({ me, templateId, invitationToken }: PublicAuditoriumViewProps) {
   const [assignments, setAssignments] = useState<SeatState>({});
 
   useEffect(() => {
@@ -78,7 +79,7 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [templateId]);
 
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
@@ -123,7 +124,7 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, [assignments, me.categoria]);
+  }, [assignments, me.categoria, mySeatId]);
 
   const handleAssign = useCallback(async () => {
     if (!selectedSeatId) return;
@@ -156,10 +157,15 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
     });
 
     try {
-      const res = await fetch('/api/asiento/asignar', {
+      const endpoint = invitationToken ? '/api/public/reservar' : '/api/asiento/asignar';
+      const payload = invitationToken
+        ? { token: invitationToken, seat_id: seatId, template_id: templateId }
+        : { seat_id: seatId, template_id: templateId };
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seat_id: seatId, template_id: templateId }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -186,7 +192,7 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
     } finally {
       setLoading(false);
     }
-  }, [selectedSeatId, me]);
+  }, [selectedSeatId, me, invitationToken, templateId]);
 
   const handleRelease = useCallback(async () => {
     if (!selectedSeatId) return;
@@ -207,10 +213,15 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
     });
 
     try {
-      const res = await fetch('/api/asiento/liberar', {
+      const endpoint = invitationToken ? '/api/public/liberar' : '/api/asiento/liberar';
+      const payload = invitationToken
+        ? { token: invitationToken, seat_id: seatId, template_id: templateId }
+        : { seat_id: seatId, template_id: templateId };
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seat_id: seatId }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -234,7 +245,7 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
     } finally {
       setLoading(false);
     }
-  }, [selectedSeatId]);
+  }, [selectedSeatId, me.categoria, invitationToken, templateId]);
 
   function seatClass(seatId: string): string {
     const a = assignments[seatId];
@@ -650,19 +661,27 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
                             <div className="flex gap-1">{renderSeats('W', 'WL', 7, false)}</div>
                             <div className="flex gap-1">{Array.from({ length: 7 }, (_, i) => <div key={`WL2-${i + 1}`}>{renderSeat(`W-WL2-${i + 1}`)}</div>)}</div>
                           </div>
-                          <div className="px-4 py-2 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center cursor-default"><span className="text-red-400 text-[11px] font-black uppercase tracking-[2px]">P. Emergencia</span></div>
+                          <div className="px-4 py-2 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30 transition-colors cursor-default">
+                            <span className="text-red-400 text-[11px] font-black uppercase whitespace-nowrap tracking-[2px] drop-shadow-sm">P. Emergencia</span>
+                          </div>
                         </div>
-                        <div className="h-14 w-[262px] border-2 border-white/30 flex items-center justify-center bg-[#151517]/90 rounded-sm"><span className="text-white/80 text-sm font-black tracking-[6px] uppercase">ENTRADA</span></div>
+                        <div className="h-14 w-[262px] border-2 border-white/30 flex items-center justify-center bg-[#151517]/90 backdrop-blur-md shadow-lg rounded-sm">
+                          <span className="text-white/80 text-sm font-black tracking-[6px] uppercase drop-shadow-md">ENTRADA</span>
+                        </div>
                       </div>
                       <div className="absolute -right-80 top-[-130px] w-80 flex flex-col items-end gap-24">
                         <div className="flex items-center gap-8 h-full">
-                          <div className="px-4 py-2 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center cursor-default"><span className="text-red-400 text-[11px] font-black uppercase tracking-[2px]">P. Emergencia</span></div>
+                          <div className="px-4 py-2 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30 transition-colors cursor-default">
+                            <span className="text-red-400 text-[11px] font-black uppercase whitespace-nowrap tracking-[2px] drop-shadow-sm">P. Emergencia</span>
+                          </div>
                           <div className="flex flex-col gap-1 items-end">
                             <div className="flex gap-1">{renderSeats('W', 'WR', 7, true)}</div>
                             <div className="flex gap-1">{Array.from({ length: 7 }, (_, i) => <div key={`WR2-${7 - i}`}>{renderSeat(`W-WR2-${7 - i}`)}</div>)}</div>
                           </div>
                         </div>
-                        <div className="h-14 w-[262px] border-2 border-white/30 flex items-center justify-center bg-[#151517]/90 rounded-sm"><span className="text-white/80 text-sm font-black tracking-[6px] uppercase">SALIDA</span></div>
+                        <div className="h-14 w-[262px] border-2 border-white/30 flex items-center justify-center bg-[#151517]/90 backdrop-blur-md shadow-lg rounded-sm">
+                          <span className="text-white/80 text-sm font-black tracking-[6px] uppercase drop-shadow-md">SALIDA</span>
+                        </div>
                       </div>
                       <div className="flex flex-col gap-1 items-start">
                         {ROWS.filter(r => !r.type && !r.center).map(row => (row.id !== 'W' && row.id !== 'CB') && (
@@ -693,19 +712,25 @@ export function PublicAuditoriumView({ me, templateId, templateName }: PublicAud
                           </div>
                         ))}
                       </div>
-                      <div className="absolute -left-80 bottom-0 h-40 w-10 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center cursor-default"><span className="text-red-400 text-[11px] font-black uppercase rotate-90 tracking-[3px]">P. Emergencia</span></div>
-                      <div className="absolute -right-80 bottom-0 h-40 w-10 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center cursor-default"><span className="text-red-400 text-[11px] font-black uppercase -rotate-90 tracking-[3px]">P. Emergencia</span></div>
+                      <div className="absolute -left-80 bottom-0 h-40 w-10 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30 transition-colors cursor-default">
+                        <span className="text-red-400 text-[11px] font-black uppercase rotate-90 whitespace-nowrap tracking-[3px] drop-shadow-sm">P. Emergencia</span>
+                      </div>
+                      <div className="absolute -right-80 bottom-0 h-40 w-10 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30 transition-colors cursor-default">
+                        <span className="text-red-400 text-[11px] font-black uppercase -rotate-90 whitespace-nowrap tracking-[3px] drop-shadow-sm">P. Emergencia</span>
+                      </div>
                     </div>
                     <div className="mt-16 flex flex-col items-center">
                       {ROWS.filter(r => r.type === 'center').map(row => (
-                        <div key={row.id} className="flex gap-1 mb-6 border-t border-b border-white/5 py-2 px-6">
+                        <div key={row.id} className="flex justify-center gap-1 mb-6 border-t border-b border-white/5 py-4 px-8 bg-white/5 rounded-2xl">
                           {renderSeats(row.id, 'C', row.center!, false)}
                         </div>
                       ))}
                       <div className="flex flex-col items-center gap-2 cursor-default opacity-80">
-                        <div className="w-[500px] border-t-2 border-double border-white/30 my-2" />
-                        <span className="text-xs font-black tracking-[8px] text-white/70 uppercase">Pantalla LED</span>
-                        <div className="w-[500px] border-b-2 border-double border-white/30 my-2" />
+                        <div className="w-[500px] border-t-2 border-double border-white/30 my-2 shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
+                        <span className="text-xs font-black tracking-[8px] text-white/70 uppercase drop-shadow-sm">
+                          Pantalla LED
+                        </span>
+                        <div className="w-[500px] border-b-2 border-double border-white/30 my-2 shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
                       </div>
                     </div>
                   </div>

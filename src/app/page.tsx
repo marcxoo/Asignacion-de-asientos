@@ -32,7 +32,7 @@ export default function LoginPage() {
 
     // Simple validation for now, could be expanded
     if (password === 'admin123' || password === '123') { // Example passwords
-      router.push('/mapa');
+      router.push('/admin');
     } else {
       setError(true);
       setLoading(false);

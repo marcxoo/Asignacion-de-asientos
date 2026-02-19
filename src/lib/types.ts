@@ -12,6 +12,17 @@ export interface Registro {
   nombre: string;
   categoria: SeatCategory;
   codigo_acceso?: string;
+  template_id?: string;
+  correo?: string | null;
+}
+
+export type InvitationStatus = 'pending' | 'sent' | 'opened' | 'reserved' | 'expired' | 'cancelled';
+
+export interface CsvInviteRow {
+  nombre: string;
+  correo: string;
+  categoria: Exclude<SeatCategory, 'bloqueado'>;
+  departamento?: string;
 }
 
 export type SeatState = Record<string, SeatAssignment | undefined>;

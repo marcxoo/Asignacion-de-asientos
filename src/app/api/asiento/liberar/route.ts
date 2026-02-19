@@ -14,16 +14,18 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const seatId = typeof body.seat_id === 'string' ? body.seat_id.trim() : '';
-    if (!seatId) {
-      return NextResponse.json({ error: 'seat_id requerido' }, { status: 400 });
+    const templateId = typeof body.template_id === 'string' ? body.template_id.trim() : '';
+    if (!seatId || !templateId) {
+      return NextResponse.json({ error: 'seat_id y template_id requeridos' }, { status: 400 });
     }
 
     const supabase = createSupabaseServer();
 
     const { data: registro } = await supabase
       .from('registros')
-      .select('id')
+      .select('id, categoria')
       .eq('token', token)
+      .eq('template_id', templateId)
       .single();
 
     if (!registro) {
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
       .from('assignments')
       .select('registro_id')
       .eq('seat_id', seatId)
+      .eq('template_id', templateId)
       .single();
 
     if (!assignment) {
@@ -46,20 +49,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: userData } = await supabase
-      .from('registros')
-      .select('categoria')
-      .eq('id', registro.id)
-      .single();
-
     const { error: updateError } = await supabase
       .from('assignments')
       .update({
         nombre_invitado: 'Cupo Disponible',
         registro_id: null,
-        categoria: userData?.categoria || 'docente'
+        categoria: registro.categoria || 'docente'
       })
-      .eq('seat_id', seatId);
+      .eq('seat_id', seatId)
+      .eq('template_id', templateId);
 
     if (updateError) {
       console.error('Error releasing seat:', updateError);

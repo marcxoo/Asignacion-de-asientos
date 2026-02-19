@@ -38,7 +38,7 @@ interface AuditoriumViewProps {
   onBack?: () => void;
   activeTemplateId?: string;
   activeTemplateName?: string;
-  onSaveTemplate?: (name: string, data: any[]) => Promise<void>;
+  onSaveTemplate?: (name: string, data: unknown[]) => Promise<void>;
 }
 
 export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, onSaveTemplate }: AuditoriumViewProps) {
@@ -888,7 +888,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
                     {/* ── BOTTOM SECTION: Center Row ── */}
                     <div className="mt-16 flex flex-col items-center">
                       {ROWS.filter(r => r.type === 'center').map(row => (
-                        <div key={row.id} className="flex gap-1 mb-6 border-t border-b border-white/5 py-2 px-6">
+                        <div key={row.id} className="flex justify-center gap-1 mb-6 border-t border-b border-white/5 py-4 px-8 bg-white/5 rounded-2xl">
                           {renderSeats(row.id, 'C', row.center!, false)}
                         </div>
                       ))}

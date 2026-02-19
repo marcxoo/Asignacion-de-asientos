@@ -6,9 +6,13 @@ export async function POST(request: Request) {
     try {
         const formData = await request.formData();
         const file = formData.get('file') as File;
+        const templateId = String(formData.get('template_id') || '').trim();
 
         if (!file) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+        }
+        if (!templateId) {
+            return NextResponse.json({ error: 'template_id is required' }, { status: 400 });
         }
 
         const buffer = await file.arrayBuffer();
@@ -39,6 +43,7 @@ export async function POST(request: Request) {
                     nombre_invitado: nombreInvitado,
                     categoria: categoria || 'invitado', // Default to invitado if missing
                     assigned_at: new Date().toISOString(),
+                    template_id: templateId,
                 });
             }
         }
@@ -46,7 +51,7 @@ export async function POST(request: Request) {
         if (updates.length > 0) {
             const { error } = await supabase
                 .from('assignments')
-                .upsert(updates, { onConflict: 'seat_id' });
+                .upsert(updates, { onConflict: 'template_id,seat_id' });
 
             if (error) {
                 console.error('Error updating assignments:', error);
