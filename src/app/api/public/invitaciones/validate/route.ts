@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 
+const COOKIE_NAME = 'asiento_registro_token';
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.nextUrl.searchParams.get('token')?.trim();
@@ -35,7 +37,16 @@ export async function GET(request: NextRequest) {
       data.invitation_status = 'opened';
     }
 
-    return NextResponse.json(data);
+    const response = NextResponse.json(data);
+    response.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+    });
+
+    return response;
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });

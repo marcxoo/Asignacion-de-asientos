@@ -59,6 +59,8 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
 
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<string>>(new Set());
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [selectedSeatEmail, setSelectedSeatEmail] = useState('');
+  const [selectedSeatAttendedAt, setSelectedSeatAttendedAt] = useState<string | null>(null);
 
   // ── Supabase Realtime & Fetch ──
   useEffect(() => {
@@ -130,6 +132,34 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     };
   }, [activeTemplateId]);
 
+  useEffect(() => {
+    const loadSelectedSeatMeta = async () => {
+      if (!selectedSeatId) {
+        setSelectedSeatEmail('');
+        setSelectedSeatAttendedAt(null);
+        return;
+      }
+
+      const assignment = assignments[selectedSeatId];
+      if (!assignment?.registro_id) {
+        setSelectedSeatEmail('');
+        setSelectedSeatAttendedAt(null);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('registros')
+        .select('correo, attended_at')
+        .eq('id', assignment.registro_id)
+        .maybeSingle();
+
+      setSelectedSeatEmail(data?.correo ?? '');
+      setSelectedSeatAttendedAt(data?.attended_at ?? null);
+    };
+
+    loadSelectedSeatMeta();
+  }, [selectedSeatId, assignments]);
+
   // ── Auto-save logic ──
   useEffect(() => {
     // DON'T auto-save if we are still fetching the initial data for this template
@@ -192,6 +222,22 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
 
   const handleExport = () => {
     window.location.href = `/api/admin/export?template_id=${activeTemplateId}`;
+  };
+
+  const handleDownloadQrCsv = () => {
+    if (!activeTemplateId) {
+      alert('Selecciona un evento para descargar los QR.');
+      return;
+    }
+    window.location.href = `/api/admin/events/${activeTemplateId}/qr-links?format=csv`;
+  };
+
+  const handleDownloadQrZip = () => {
+    if (!activeTemplateId) {
+      alert('Selecciona un evento para descargar los QR.');
+      return;
+    }
+    window.location.href = `/api/admin/events/${activeTemplateId}/qr-links?format=zip`;
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -287,7 +333,13 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
   }, [setIsSidebarOpen, setSelectedSeatId, setSelectedSeatIds]);
 
 
-  const handleAssign = async (seatId: string, nombre: string, categoria: SeatCategory) => {
+  const handleAssign = async (seatId: string, nombre: string, categoria: SeatCategory, correo?: string) => {
+    if (!activeTemplateId) return;
+    if (!correo?.trim()) {
+      alert('Debes ingresar un correo para enviar la asignacion.');
+      return;
+    }
+
     setLoading(true);
     // Optimistic Update
     setAssignments(prev => ({
@@ -300,16 +352,21 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     }));
     setSelectedSeatId(null);
 
-    const { error } = await supabase.from('assignments').upsert({
-      seat_id: seatId,
-      nombre_invitado: nombre,
-      categoria: categoria,
-      assigned_at: new Date().toISOString(),
-      template_id: activeTemplateId
+    const res = await fetch(`/api/admin/events/${activeTemplateId}/assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seat_id: seatId,
+        nombre,
+        categoria,
+        correo,
+        send_email: true,
+      }),
     });
 
-    if (error) {
-      console.error('Error:', error);
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      console.error('Error assigning seat:', payload);
       // Rollback on error
       const { data } = await supabase.from('assignments').select('*').eq('seat_id', seatId).eq('template_id', activeTemplateId).single();
       setAssignments(prev => {
@@ -318,13 +375,29 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
           next[seatId] = {
             nombre_invitado: data.nombre_invitado,
             categoria: data.categoria as SeatCategory,
-            asignado_en: data.assigned_at
+            asignado_en: data.assigned_at,
+            registro_id: data.registro_id,
           };
         } else {
           delete next[seatId];
         }
         return next;
       });
+      alert(payload.error || 'No se pudo asignar el asiento.');
+    } else {
+      const payload = await res.json().catch(() => null);
+      if (payload?.warning) {
+        const details = payload?.detail ? `\n\nDetalle: ${payload.detail}` : '';
+        alert(`${payload.warning}${details}`);
+      } else if (payload?.email_sent) {
+        alert(payload?.seat_changed
+          ? 'Asiento actualizado y correo de cambio enviado.'
+          : 'Asiento asignado y correo enviado.');
+      } else {
+        alert(payload?.seat_changed
+          ? 'Asiento actualizado. No se envio correo.'
+          : 'Asiento asignado.');
+      }
     }
     setLoading(false);
 
@@ -357,9 +430,34 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     setLoading(false);
   };
 
+  const handleToggleAttendance = async (attended: boolean) => {
+    if (!activeTemplateId || !selectedSeatId) return;
+    const assignment = assignments[selectedSeatId];
+    if (!assignment?.registro_id) return;
+
+    const res = await fetch(`/api/admin/events/${activeTemplateId}/attendance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        registro_id: assignment.registro_id,
+        attended,
+      }),
+    });
+
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(payload.error || 'No se pudo actualizar asistencia');
+      return;
+    }
+
+    setSelectedSeatAttendedAt(payload.attended_at ?? null);
+    alert(payload.attended ? 'Asistencia marcada correctamente.' : 'Asistencia removida.');
+  };
+
   // ── Bulk Handlers ──
 
-  const handleBulkAssign = async (seatId: string, nombre: string, categoria: SeatCategory) => {
+  const handleBulkAssign = async (seatId: string, nombre: string, categoria: SeatCategory, _correo?: string) => {
+    void _correo;
     // seatId is ignored in bulk mode
     if (selectedSeatIds.size === 0) return;
     setLoading(true);
@@ -389,7 +487,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
       template_id: activeTemplateId
     }));
 
-    const { error } = await supabase.from('assignments').upsert(updates);
+    const { error } = await supabase.from('assignments').upsert(updates, { onConflict: 'template_id,seat_id' });
 
     if (error) {
       console.error('Error bulk assigning:', error);
@@ -599,6 +697,31 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
                       </>
                     )}
                   </label>
+                </div>
+              </div>
+
+              {/* QR Check-in Downloads */}
+              <div className="space-y-4 pt-4 border-t border-white/5">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
+                  <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                  QRs Check-in
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleDownloadQrCsv}
+                    className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/20 transition-all group"
+                  >
+                    <ArrowDownTrayIcon className="w-5 h-5 text-sky-300 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold text-sky-300">CSV QR</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadQrZip}
+                    className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-orange/10 border border-orange/20 hover:bg-orange/20 transition-all group"
+                  >
+                    <ArrowDownTrayIcon className="w-5 h-5 text-orange group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold text-orange">ZIP QR+PNG</span>
+                  </button>
                 </div>
               </div>
 
@@ -920,6 +1043,11 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
             onRelease={handleRelease}
             onClose={() => setSelectedSeatId(null)}
             loading={loading}
+            requireEmail
+            initialEmail={selectedSeatEmail}
+            attended={Boolean(selectedSeatAttendedAt)}
+            attendedAt={selectedSeatAttendedAt}
+            onToggleAttendance={handleToggleAttendance}
           />
         )
       }

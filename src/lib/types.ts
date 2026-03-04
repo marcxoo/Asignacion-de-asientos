@@ -14,6 +14,9 @@ export interface Registro {
   codigo_acceso?: string;
   template_id?: string;
   correo?: string | null;
+  attended_at?: string | null;
+  checked_in_at?: string | null;
+  checked_in_seat_id?: string | null;
 }
 
 export type InvitationStatus = 'pending' | 'sent' | 'opened' | 'reserved' | 'expired' | 'cancelled';

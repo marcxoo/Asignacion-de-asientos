@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SeatState, SeatCategory } from '@/lib/types';
 import { CATEGORY_CONFIG, parseSeatId, TEACHER_SLOT_LABEL } from '@/lib/seats-data';
 import { motion } from 'framer-motion';
@@ -12,17 +12,29 @@ import {
 interface Props {
   seatId: string;
   assignment?: SeatState[string];
-  onAssign: (seatId: string, nombre: string, categoria: SeatCategory) => void;
+  onAssign: (seatId: string, nombre: string, categoria: SeatCategory, correo?: string) => void;
   onRelease: (seatId: string) => void;
   onClose: () => void;
   loading?: boolean;
+  requireEmail?: boolean;
+  initialEmail?: string;
+  attended?: boolean;
+  attendedAt?: string | null;
+  onToggleAttendance?: (attended: boolean) => void;
 }
 
-export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClose, loading = false }: Props) {
+export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClose, loading = false, requireEmail = false, initialEmail = '', attended = false, attendedAt = null, onToggleAttendance }: Props) {
   const [nombre, setNombre] = useState(assignment?.nombre_invitado || '');
+  const [correo, setCorreo] = useState(initialEmail);
   const [categoria, setCategoria] = useState<SeatCategory>(assignment?.categoria || 'invitado');
   const info = parseSeatId(seatId);
   const isBulk = seatId === 'bulk-selection';
+
+  useEffect(() => {
+    setNombre(assignment?.nombre_invitado || '');
+    setCategoria(assignment?.categoria || 'invitado');
+    setCorreo(initialEmail || '');
+  }, [seatId, assignment, initialEmail]);
 
   const activeConfig = CATEGORY_CONFIG[categoria];
   const activeColor = activeConfig.hex || '#10b981';
@@ -50,7 +62,7 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
         // Existing logic allows empty if not trimmed? No, logic above requires finalName.
         // Let's default to "Asignación Masiva" or just let user type.
       }
-      onAssign(seatId, finalName || 'Invitado', categoria);
+      onAssign(seatId, finalName || 'Invitado', categoria, correo.trim().toLowerCase());
     }
   };
 
@@ -114,6 +126,49 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
                 />
               </div>
             </div>
+
+            {requireEmail && !isBulk && (
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] block ml-1">
+                  Correo del Invitado
+                </label>
+                <div className="relative group">
+                  <input
+                    type="email"
+                    value={correo}
+                    onChange={(e) => setCorreo(e.target.value)}
+                    className="w-full bg-black/20 border border-white/5 rounded-2xl px-4 py-4 text-white focus:ring-4 focus:ring-orange/10 focus:border-orange/40 transition-all outline-none placeholder:text-slate-700 font-semibold"
+                    placeholder="correo@ejemplo.com"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            {!isBulk && assignment?.registro_id && onToggleAttendance && (
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] block ml-1">
+                  Asistencia
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onToggleAttendance(!attended)}
+                    className={`px-4 py-3 rounded-xl border text-xs font-black transition-all ${attended
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                      : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                      }`}
+                  >
+                    {attended ? 'Marcado como asistio' : 'Marcar asistencia'}
+                  </button>
+                  {attended && attendedAt && (
+                    <span className="text-[11px] text-slate-400">
+                      {new Date(attendedAt).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] block ml-1">
@@ -182,7 +237,7 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
 
               <button
                 type="submit"
-                disabled={!nombre.trim() || loading}
+                disabled={!nombre.trim() || (requireEmail && !correo.trim() && !isBulk) || loading}
                 className="flex-[1.8] py-4 rounded-2xl text-sm font-black text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-2 group overflow-hidden relative"
                 style={{ backgroundColor: activeColor }}
               >

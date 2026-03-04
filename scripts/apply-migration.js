@@ -17,16 +17,23 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-const migrationPath = path.join(__dirname, '..', 'supabase', 'migrations', '20260211000000_registros_y_registro_id.sql');
-const sql = fs.readFileSync(migrationPath, 'utf8');
+const migrationsDir = path.join(__dirname, '..', 'supabase', 'migrations');
+
+function getMigrationFiles() {
+  return fs
+    .readdirSync(migrationsDir)
+    .filter((name) => name.endsWith('.sql'))
+    .sort()
+    .map((name) => path.join(migrationsDir, name));
+}
 
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) {
     console.error('Falta DATABASE_URL en .env.local.');
     console.error('Obtén la connection URI en Supabase: Settings → Database → Connection string (URI).');
-    console.error('O ejecuta el SQL manualmente en Supabase → SQL Editor:');
-    console.error(migrationPath);
+    console.error('O ejecuta los SQL manualmente en Supabase → SQL Editor:');
+    console.error(migrationsDir);
     process.exit(1);
   }
 
@@ -41,8 +48,15 @@ async function main() {
   const client = new pg.Client({ connectionString: url });
   try {
     await client.connect();
-    await client.query(sql);
-    console.log('Migración aplicada correctamente.');
+    const migrationFiles = getMigrationFiles();
+
+    for (const file of migrationFiles) {
+      const sql = fs.readFileSync(file, 'utf8');
+      await client.query(sql);
+      console.log(`Migración aplicada: ${path.basename(file)}`);
+    }
+
+    console.log('Todas las migraciones fueron aplicadas correctamente.');
   } catch (err) {
     console.error('Error aplicando migración:', err.message);
     process.exit(1);

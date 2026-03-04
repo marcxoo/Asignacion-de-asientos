@@ -10,10 +10,11 @@ export async function GET(_: Request, { params }: RouteParams) {
     const { eventId } = await params;
     const supabase = createSupabaseServer();
 
-    const [{ data: template }, { count: assignedCount }, { count: pendingInvites }, { data: quotas }] = await Promise.all([
+    const [{ data: template }, { count: assignedCount }, { count: pendingInvites }, { count: attendedCount }, { data: quotas }] = await Promise.all([
       supabase.from('templates').select('id, name, created_at').eq('id', eventId).single(),
       supabase.from('assignments').select('seat_id', { count: 'exact', head: true }).eq('template_id', eventId),
       supabase.from('registros').select('id', { count: 'exact', head: true }).eq('template_id', eventId).eq('invitation_status', 'pending'),
+      supabase.from('registros').select('id', { count: 'exact', head: true }).eq('template_id', eventId).not('attended_at', 'is', null),
       supabase.from('event_quotas').select('categoria, cupo_total, cupo_usado').eq('template_id', eventId),
     ]);
 
@@ -26,6 +27,7 @@ export async function GET(_: Request, { params }: RouteParams) {
       metrics: {
         assigned: assignedCount ?? 0,
         pendingInvites: pendingInvites ?? 0,
+        attended: attendedCount ?? 0,
       },
       quotas: quotas ?? [],
     });

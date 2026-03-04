@@ -12,6 +12,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
    - `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Supabase → Settings → API).
    - `SUPABASE_SERVICE_ROLE_KEY` (Settings → API → service_role, solo servidor).
    - Opcional: `ACCESS_PASSWORD` para el login de organizadores.
+   - Opcional para envio real de correos: `RESEND_API_KEY` y `MAIL_FROM`.
+   - Recomendado para enlaces de correos: `APP_URL` (o `NEXT_PUBLIC_APP_URL`), por ejemplo `https://tu-dominio.com`.
 
 2. **Migración en Supabase**  
    Crea la tabla `registros` y la columna `registro_id` en `assignments`:
@@ -27,6 +29,17 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
    ```
    - Invitados: [http://localhost:3000/elegir](http://localhost:3000/elegir)  
    - Organizadores: [http://localhost:3000](http://localhost:3000) (contraseña) → [http://localhost:3000/mapa](http://localhost:3000/mapa)
+
+## Check-in automático por QR de asiento
+
+- Cada asiento puede tener un QR con URL del tipo: `/checkin?event=<eventId>&seat=<seatId>`.
+- Para generar todas las URLs por evento usa: `GET /api/admin/events/:eventId/qr-links`.
+- Para descargarlo listo para imprimir en Excel/Sheets: `GET /api/admin/events/:eventId/qr-links?format=csv`.
+- Para descargar paquete imprimible (CSV + PNG QR por asiento): `GET /api/admin/events/:eventId/qr-links?format=zip`.
+- Flujo recomendado:
+  1. El invitado abre su enlace de invitación (esto crea sesión por token en su navegador).
+  2. En el evento, escanea el QR físico de su asiento.
+  3. La página `/checkin` valida que el asiento escaneado coincide con su asignación y marca asistencia automáticamente.
 
 ## Getting Started
 

@@ -28,6 +28,11 @@ const nextConfig: NextConfig = {
         destination: '/invitacion/:token',
         permanent: true,
       },
+      {
+        source: '/a/:token',
+        destination: '/asignacion/:token',
+        permanent: true,
+      },
     ];
   },
 };

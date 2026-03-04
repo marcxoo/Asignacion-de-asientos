@@ -162,7 +162,7 @@ export function SharedAuditoriumView({ templateId, eventName }: SharedAuditorium
             template_id: templateId
         }));
 
-        const { error } = await supabase.from('assignments').upsert(updates);
+        const { error } = await supabase.from('assignments').upsert(updates, { onConflict: 'template_id,seat_id' });
 
         if (error) {
             console.error('Error reserving:', error);
