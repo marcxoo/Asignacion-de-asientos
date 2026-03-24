@@ -404,11 +404,13 @@ export function SharedAuditoriumView({ templateId, eventName }: SharedAuditorium
                                         {/* ── TOP SECTION: Flanks & Cabina ── */}
                                         <div className="flex items-end gap-16 mb-20">
                                             {/* Left Flank */}
-                                            <div className="w-48 flex justify-end">
+                                            <div className="w-80 flex justify-end">
                                                 <div className="flex flex-col gap-1 items-end">
                                                     {ROWS.filter(r => r.type === 'cabin-flank').map(row => (
-                                                        <div key={row.id} className="flex gap-1">
-                                                            {renderSeats(row.id, 'CL', row.left!, false)}
+                                                        <div key={row.id} className="flex gap-4 items-center">
+                                                            <div className="flex gap-1">
+                                                                {renderSeats(row.id, 'CL', row.left!, false)}
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -420,11 +422,13 @@ export function SharedAuditoriumView({ templateId, eventName }: SharedAuditorium
                                             </div>
 
                                             {/* Right Flank */}
-                                            <div className="w-48 flex justify-start">
+                                            <div className="w-80 flex justify-start">
                                                 <div className="flex flex-col gap-1 items-start">
                                                     {ROWS.filter(r => r.type === 'cabin-flank').map(row => (
-                                                        <div key={row.id} className="flex gap-1">
-                                                            {renderSeats(row.id, 'CR', row.right!, true)}
+                                                        <div key={row.id} className="flex gap-4 items-center">
+                                                            <div className="flex gap-1">
+                                                                {renderSeats(row.id, 'CR', row.right!, true)}
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -440,11 +444,21 @@ export function SharedAuditoriumView({ templateId, eventName }: SharedAuditorium
                                                 {/* Left Wing & Emergency Door (Placed in the gap) */}
                                                 <div className="flex items-center gap-8 h-full">
                                                     <div className="flex flex-col gap-1 items-start">
-                                                        <div className="flex gap-1">{renderSeats('W', 'WL', 7, false)}</div>
-                                                        <div className="flex gap-1">
-                                                            {Array.from({ length: 7 }).map((_, i) => (
-                                                                <div key={`WL2-${i + 1}`}>{renderSeat(`W-WL2-${i + 1}`)}</div>
-                                                            ))}
+                                                        <div className="flex gap-4 items-center">
+                                                            <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                                                L
+                                                            </span>
+                                                            <div className="flex gap-1">
+                                                                {Array.from({ length: 7 }).map((_, i) => (
+                                                                    <div key={`WL2-${i + 1}`}>{renderSeat(`W-WL2-${i + 1}`)}</div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-4 items-center">
+                                                            <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                                                K
+                                                            </span>
+                                                            <div className="flex gap-1">{renderSeats('W', 'WL', 7, false)}</div>
                                                         </div>
                                                     </div>
                                                     <div className="px-4 py-2 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30 transition-colors cursor-default">
@@ -498,12 +512,22 @@ export function SharedAuditoriumView({ templateId, eventName }: SharedAuditorium
                                             <div className="absolute -right-80 top-[-130px] w-80 flex flex-col items-end gap-24">
                                                 {/* Right Wing & Emergency Door */}
                                                 <div className="flex items-center gap-8 h-full flex-row-reverse">
-                                                    <div className="flex flex-col gap-1 items-start">
-                                                        <div className="flex gap-1">{renderSeats('W', 'WR', 7, true)}</div>
-                                                        <div className="flex gap-1">
-                                                            {Array.from({ length: 7 }).map((_, i) => (
-                                                                <div key={`WR2-${i + 1}`}>{renderSeat(`W-WR2-${i + 1}`)}</div>
-                                                            ))}
+                                                    <div className="flex flex-col gap-1 items-end">
+                                                        <div className="flex gap-4 items-center">
+                                                            <div className="flex gap-1">
+                                                                {Array.from({ length: 7 }).map((_, i) => (
+                                                                    <div key={`WR2-${i + 1}`}>{renderSeat(`W-WR2-${i + 1}`)}</div>
+                                                                ))}
+                                                            </div>
+                                                            <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                                                L
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex gap-4 items-center">
+                                                            <div className="flex gap-1">{renderSeats('W', 'WR', 7, true)}</div>
+                                                            <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                                                K
+                                                            </span>
                                                         </div>
                                                     </div>
                                                     <div className="px-4 py-2 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30 transition-colors cursor-default">
@@ -529,8 +553,16 @@ export function SharedAuditoriumView({ templateId, eventName }: SharedAuditorium
                                         {/* Bottom Center Row */}
                                         <div className="mt-16 relative">
                                             {ROWS.filter(r => r.type === 'center').map(row => (
-                                                <div key={row.id} className="flex justify-center gap-1 mb-6 border-t border-b border-white/5 py-4 px-8 bg-white/5 rounded-2xl">
-                                                    {renderSeats(row.id, 'C', row.center!, false)}
+                                                <div key={row.id} className="flex justify-center items-center gap-6 mb-6 border-t border-b border-white/5 py-4 px-8 bg-white/5 rounded-2xl">
+                                                    <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                                        {row.label}
+                                                    </span>
+                                                    <div className="flex gap-1">
+                                                        {renderSeats(row.id, 'C', row.center!, false)}
+                                                    </div>
+                                                    <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                                        {row.label}
+                                                    </span>
                                                 </div>
                                             ))}
                                             <div className="flex flex-col items-center gap-2 cursor-default opacity-80 mt-4">

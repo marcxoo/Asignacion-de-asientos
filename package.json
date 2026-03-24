@@ -15,12 +15,14 @@
     "@types/qrcode": "^1.5.6",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.34.0",
+    "jsqr": "^1.4.0",
     "jszip": "^3.10.1",
     "next": "16.1.6",
     "qrcode": "^1.5.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-zoom-pan-pinch": "^3.7.0",
+    "ts-node": "^10.9.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

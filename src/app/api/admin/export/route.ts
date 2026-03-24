@@ -356,7 +356,7 @@ function createDynamicTablesSheet(
     sheet.getCell(row, 3).numFmt = '0.00%';
   });
 
-  const rowLabels = ['W', 'K', 'J', 'I', 'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A', 'C1'];
+  const rowLabels = ['L', 'K', 'J', 'I', 'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A', 'C1'];
   rowLabels.forEach((label, i) => {
     const row = 5 + i;
     sheet.getCell(row, 5).value = label;
@@ -489,7 +489,7 @@ export async function GET(request: NextRequest) {
     bloqueado: 0,
   };
   const rowCounts: Record<string, number> = {
-    W: 0,
+    L: 0,
     K: 0,
     J: 0,
     I: 0,

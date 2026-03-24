@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       seccion: info.sectionLabel,
       asiento_numero: info.numero,
       display: info.display,
-      checkin_url: `${origin}/checkin?event=${encodeURIComponent(eventId)}&seat=${encodeURIComponent(seatId)}`,
+      checkin_url: `${origin}/checkin?seat=${encodeURIComponent(seatId)}`,
     };
   });
 

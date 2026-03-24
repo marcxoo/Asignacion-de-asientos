@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { SeatState, SeatCategory, Registro } from '@/lib/types';
 import { ROWS, parseSeatId, CATEGORY_CONFIG } from '@/lib/seats-data';
 import { PublicSeatModal } from './PublicSeatModal';
 import { supabase } from '@/lib/supabase';
+import jsQR from 'jsqr';
 import {
   UserCircleIcon,
   MapPinIcon,
+  QrCodeIcon,
   ChartBarIcon,
   InformationCircleIcon,
   TicketIcon,
@@ -85,10 +87,204 @@ export function PublicAuditoriumView({ me, templateId, invitationToken }: Public
   const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [checkinFeedback, setCheckinFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [scannerInfo, setScannerInfo] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanAnimation, setScanAnimation] = useState<'success' | 'error' | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const scanLockRef = useRef(false);
+  const scanAnimationRef = useRef<'success' | 'error' | null>(null);
 
   const mySeatId = useMemo(() => {
     return Object.entries(assignments).find(([, a]) => a?.registro_id === me.id)?.[0] ?? null;
   }, [assignments, me.id]);
+
+  useEffect(() => {
+    scanAnimationRef.current = scanAnimation;
+  }, [scanAnimation]);
+
+  const stopScanner = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setIsScannerOpen(false);
+    setScanning(false);
+    setScannerInfo(null);
+    setScanAnimation(null);
+  }, []);
+
+  const submitCheckin = useCallback(async (eventId: string, seatId: string, inScanner = false): Promise<boolean> => {
+    const res = await fetch('/api/public/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: eventId, seat_id: seatId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const detail = data?.assigned_display ? ` Tu asiento asignado es: ${data.assigned_display}.` : '';
+      const message = `${data.error || 'No se pudo confirmar asistencia.'}${detail}`;
+      setCheckinFeedback({ ok: false, message });
+      if (inScanner) {
+        setScannerError(message);
+        setScanAnimation('error');
+        window.setTimeout(() => setScanAnimation(null), 1200);
+      }
+      return false;
+    }
+    const message = data.message || 'Asistencia confirmada.';
+    setCheckinFeedback({ ok: true, message });
+    if (inScanner) {
+      setScannerInfo(message);
+      setScanAnimation('success');
+    }
+    return true;
+  }, []);
+
+  const handleQrRawValue = useCallback(async (rawValue: string) => {
+    if (scanLockRef.current) return;
+    scanLockRef.current = true;
+    try {
+      const parsed = new URL(rawValue, window.location.origin);
+      const eventId = parsed.searchParams.get('event')?.trim() || '';
+      const seatId = parsed.searchParams.get('seat')?.trim() || '';
+
+      if (!seatId) {
+        setScannerError('QR invalido. Debe ser un QR de asiento generado por el sistema.');
+        setScanAnimation('error');
+        window.setTimeout(() => setScanAnimation(null), 1200);
+        scanLockRef.current = false;
+        return;
+      }
+
+      setScannerInfo(`QR detectado: ${seatId}. Validando...`);
+      const success = await submitCheckin(eventId || templateId, seatId, true);
+      if (success) {
+        window.setTimeout(() => stopScanner(), 1200);
+      } else {
+        scanLockRef.current = false;
+      }
+    } catch {
+      setScannerError('No se pudo leer el contenido del QR. Intenta nuevamente.');
+      setScanAnimation('error');
+      window.setTimeout(() => setScanAnimation(null), 1200);
+      scanLockRef.current = false;
+    }
+  }, [stopScanner, submitCheckin]);
+
+  const openScanner = useCallback(async () => {
+    setCheckinFeedback(null);
+    setScannerError(null);
+    setScannerInfo('Abriendo camara...');
+    setScanAnimation(null);
+    setIsScannerOpen(true);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setScannerError('Tu navegador no permite acceso a camara para escaneo QR.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (!video) return;
+
+      video.srcObject = stream;
+      await video.play();
+
+      const Detector = (window as unknown as {
+        BarcodeDetector?: new (opts?: { formats?: string[] }) => {
+          detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
+        };
+      }).BarcodeDetector;
+      const detector = Detector ? new Detector({ formats: ['qr_code'] }) : null;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+      setScanning(true);
+      setScannerInfo(detector
+        ? 'Camara activa. Apunta al QR del asiento.'
+        : 'Camara activa. Escaneo compatible activado.');
+      scanLockRef.current = false;
+
+      const scan = async () => {
+        if (!videoRef.current || !streamRef.current) return;
+        if (scanAnimationRef.current) {
+          rafRef.current = requestAnimationFrame(scan);
+          return;
+        }
+        try {
+          let raw: string | undefined;
+
+          if (detector) {
+            const codes = await detector.detect(videoRef.current);
+            raw = codes?.[0]?.rawValue;
+          }
+
+          if (!raw && ctx && videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
+            canvas.width = videoRef.current.videoWidth;
+            canvas.height = videoRef.current.videoHeight;
+            ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'attemptBoth',
+            });
+            raw = code?.data;
+          }
+
+          if (raw) {
+            await handleQrRawValue(raw);
+            return;
+          }
+        } catch {
+          // continue scanning
+        }
+        rafRef.current = requestAnimationFrame(scan);
+      };
+
+      rafRef.current = requestAnimationFrame(scan);
+    } catch {
+      setScannerError('No se pudo abrir la camara. Revisa permisos del navegador y vuelve a intentar.');
+      setScanning(false);
+    }
+  }, [handleQrRawValue]);
+
+  useEffect(() => {
+    if (!isScannerOpen) {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      setScanning(false);
+    }
+  }, [isScannerOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   // ... inside PublicAuditoriumView
 
@@ -537,6 +733,31 @@ export function PublicAuditoriumView({ me, templateId, invitationToken }: Public
             )}
           </AnimatePresence>
 
+          {mySeatId && (
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/5 space-y-3">
+              <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[3px]">
+                <QrCodeIcon className="w-4 h-4" />
+                Check-in por QR
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Escanea el QR pegado en tu asiento para validar asistencia automática.
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  onClick={openScanner}
+                  className="text-center px-3 py-2 rounded-xl bg-sky-500/15 border border-sky-400/30 text-sky-300 text-xs font-bold hover:bg-sky-500/25 transition-colors"
+                >
+                  Escanear QR del asiento
+                </button>
+              </div>
+              {checkinFeedback && (
+                <p className={`text-xs font-semibold ${checkinFeedback.ok ? 'text-emerald-300' : 'text-red-300'}`}>
+                  {checkinFeedback.message}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Legend Section */}
           <div className="space-y-5">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] px-1 flex items-center gap-2">
@@ -598,6 +819,97 @@ export function PublicAuditoriumView({ me, templateId, invitationToken }: Public
         </div>
       </aside>
 
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#001D2D] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-white">Escanear QR del asiento</h3>
+              <button
+                onClick={stopScanner}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10"
+              >
+                Cerrar
+              </button>
+            </div>
+            <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black aspect-[3/4] flex items-center justify-center">
+              <video ref={videoRef} className="w-full h-full object-cover" playsInline muted autoPlay />
+              <AnimatePresence>
+                {scanAnimation && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.75, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 280, damping: 18 }}
+                      className="flex flex-col items-center gap-3"
+                    >
+                      <motion.div
+                        initial={{ scale: 0.6, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                        className={`w-24 h-24 rounded-full border-4 flex items-center justify-center ${scanAnimation === 'success'
+                          ? 'border-emerald-300 bg-emerald-500/15'
+                          : 'border-red-300 bg-red-500/15'}`}
+                      >
+                        {scanAnimation === 'success' ? (
+                          <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                            <motion.path
+                              d="M14 27L23 36L39 18"
+                              stroke="#86efac"
+                              strokeWidth="5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              initial={{ pathLength: 0 }}
+                              animate={{ pathLength: 1 }}
+                              transition={{ duration: 0.35, ease: 'easeOut' }}
+                            />
+                          </svg>
+                        ) : (
+                          <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                            <motion.path
+                              d="M16 16L36 36"
+                              stroke="#fca5a5"
+                              strokeWidth="5"
+                              strokeLinecap="round"
+                              initial={{ pathLength: 0 }}
+                              animate={{ pathLength: 1 }}
+                              transition={{ duration: 0.2, ease: 'easeOut' }}
+                            />
+                            <motion.path
+                              d="M36 16L16 36"
+                              stroke="#fca5a5"
+                              strokeWidth="5"
+                              strokeLinecap="round"
+                              initial={{ pathLength: 0 }}
+                              animate={{ pathLength: 1 }}
+                              transition={{ duration: 0.2, ease: 'easeOut', delay: 0.12 }}
+                            />
+                          </svg>
+                        )}
+                      </motion.div>
+                      <p className={`text-sm font-black ${scanAnimation === 'success' ? 'text-emerald-300' : 'text-red-300'}`}>
+                        {scanAnimation === 'success' ? 'Asistencia confirmada' : 'QR rechazado'}
+                      </p>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <p className="text-xs text-slate-400">
+              Apunta la camara al QR pegado en tu asiento.
+            </p>
+            {scanning && <p className="text-xs text-sky-300 font-semibold">Escaneando...</p>}
+            {scannerInfo && <p className="text-xs text-slate-300 font-semibold">{scannerInfo}</p>}
+            {scannerError && <p className="text-xs text-red-300 font-semibold">{scannerError}</p>}
+          </div>
+        </div>
+      )}
+
       <main
         className="relative flex-1 h-full overflow-hidden bg-[#151517]"
         style={{
@@ -636,20 +948,26 @@ export function PublicAuditoriumView({ me, templateId, invitationToken }: Public
                 <div className="p-40 min-w-fit cursor-grab active:cursor-grabbing" onClick={handleMapClick}>
                   <div className="flex flex-col items-center">
                     <div className="flex items-end gap-16 mb-20">
-                      <div className="w-48 flex justify-end">
+                      <div className="w-80 flex justify-end">
                         <div className="flex flex-col gap-1 items-end">
                           {ROWS.filter(r => r.type === 'cabin-flank').map(row => (
-                            <div key={row.id} className="flex gap-1">{renderSeats(row.id, 'CL', row.left!, false)}</div>
+                            <div key={row.id} className="flex gap-4 items-center">
+                              <div className="flex gap-1">
+                                {renderSeats(row.id, 'CL', row.left!, false)}
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
                       <div className="w-64 h-16 bg-black border border-white/40 flex items-center justify-center mb-[-0.25rem] shadow-[0_-5px_20px_rgba(255,255,255,0.05)] relative z-20 rounded-t-lg">
                         <span className="text-sm font-black tracking-[0.2em] text-white drop-shadow-md">CABINA</span>
                       </div>
-                      <div className="w-48 flex justify-start">
+                      <div className="w-80 flex justify-start">
                         <div className="flex flex-col gap-1 items-start">
                           {ROWS.filter(r => r.type === 'cabin-flank').map(row => (
-                            <div key={row.id} className="flex gap-1">{renderSeats(row.id, 'CR', row.right!, true)}</div>
+                            <div key={row.id} className="flex gap-4 items-center">
+                              <div className="flex gap-1">{renderSeats(row.id, 'CR', row.right!, true)}</div>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -658,8 +976,18 @@ export function PublicAuditoriumView({ me, templateId, invitationToken }: Public
                       <div className="absolute -left-80 top-[-130px] w-80 flex flex-col items-start gap-24">
                         <div className="flex items-center gap-8 h-full">
                           <div className="flex flex-col gap-1 items-start">
-                            <div className="flex gap-1">{renderSeats('W', 'WL', 7, false)}</div>
-                            <div className="flex gap-1">{Array.from({ length: 7 }, (_, i) => <div key={`WL2-${i + 1}`}>{renderSeat(`W-WL2-${i + 1}`)}</div>)}</div>
+                            <div className="flex gap-4 items-center">
+                              <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                L
+                              </span>
+                              <div className="flex gap-1">{Array.from({ length: 7 }, (_, i) => <div key={`WL2-${i + 1}`}>{renderSeat(`W-WL2-${i + 1}`)}</div>)}</div>
+                            </div>
+                            <div className="flex gap-4 items-center">
+                              <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                K
+                              </span>
+                              <div className="flex gap-1">{renderSeats('W', 'WL', 7, false)}</div>
+                            </div>
                           </div>
                           <div className="px-4 py-2 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30 transition-colors cursor-default">
                             <span className="text-red-400 text-[11px] font-black uppercase whitespace-nowrap tracking-[2px] drop-shadow-sm">P. Emergencia</span>
@@ -670,13 +998,20 @@ export function PublicAuditoriumView({ me, templateId, invitationToken }: Public
                         </div>
                       </div>
                       <div className="absolute -right-80 top-[-130px] w-80 flex flex-col items-end gap-24">
-                        <div className="flex items-center gap-8 h-full">
-                          <div className="px-4 py-2 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30 transition-colors cursor-default">
-                            <span className="text-red-400 text-[11px] font-black uppercase whitespace-nowrap tracking-[2px] drop-shadow-sm">P. Emergencia</span>
-                          </div>
+                        <div className="flex items-center gap-8 h-full flex-row-reverse">
                           <div className="flex flex-col gap-1 items-end">
-                            <div className="flex gap-1">{renderSeats('W', 'WR', 7, true)}</div>
-                            <div className="flex gap-1">{Array.from({ length: 7 }, (_, i) => <div key={`WR2-${7 - i}`}>{renderSeat(`W-WR2-${7 - i}`)}</div>)}</div>
+                            <div className="flex gap-4 items-center">
+                              <div className="flex gap-1">{Array.from({ length: 7 }, (_, i) => <div key={`WR2-${7 - i}`}>{renderSeat(`W-WR2-${7 - i}`)}</div>)}</div>
+                              <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                L
+                              </span>
+                            </div>
+                            <div className="flex gap-4 items-center">
+                              <div className="flex gap-1">{renderSeats('W', 'WR', 7, true)}</div>
+                              <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                                K
+                              </span>
+                            </div>
                           </div>
                         </div>
                         <div className="h-14 w-[262px] border-2 border-white/30 flex items-center justify-center bg-[#151517]/90 backdrop-blur-md shadow-lg rounded-sm">
@@ -721,8 +1056,16 @@ export function PublicAuditoriumView({ me, templateId, invitationToken }: Public
                     </div>
                     <div className="mt-16 flex flex-col items-center">
                       {ROWS.filter(r => r.type === 'center').map(row => (
-                        <div key={row.id} className="flex justify-center gap-1 mb-6 border-t border-b border-white/5 py-4 px-8 bg-white/5 rounded-2xl">
-                          {renderSeats(row.id, 'C', row.center!, false)}
+                        <div key={row.id} className="flex justify-center items-center gap-6 mb-6 border-t border-b border-white/5 py-4 px-8 bg-white/5 rounded-2xl">
+                          <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                            {row.label}
+                          </span>
+                          <div className="flex gap-1">
+                            {renderSeats(row.id, 'C', row.center!, false)}
+                          </div>
+                          <span className="text-[11px] font-black text-slate-500 w-6 h-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5">
+                            {row.label}
+                          </span>
                         </div>
                       ))}
                       <div className="flex flex-col items-center gap-2 cursor-default opacity-80">

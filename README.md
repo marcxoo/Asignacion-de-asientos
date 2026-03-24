@@ -32,7 +32,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Check-in automático por QR de asiento
 
-- Cada asiento puede tener un QR con URL del tipo: `/checkin?event=<eventId>&seat=<seatId>`.
+- Cada asiento usa un QR fijo (no cambia por evento) con URL del tipo: `/checkin?seat=<seatId>`.
+- El evento se determina por la sesión del invitado (debe abrir primero su enlace de invitación).
 - Para generar todas las URLs por evento usa: `GET /api/admin/events/:eventId/qr-links`.
 - Para descargarlo listo para imprimir en Excel/Sheets: `GET /api/admin/events/:eventId/qr-links?format=csv`.
 - Para descargar paquete imprimible (CSV + PNG QR por asiento): `GET /api/admin/events/:eventId/qr-links?format=zip`.

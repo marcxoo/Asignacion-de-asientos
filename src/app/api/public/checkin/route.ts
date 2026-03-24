@@ -8,11 +8,11 @@ const COOKIE_NAME = 'asiento_registro_token';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const eventId = typeof body.event_id === 'string' ? body.event_id.trim() : '';
+    const eventIdFromQr = typeof body.event_id === 'string' ? body.event_id.trim() : '';
     const seatId = typeof body.seat_id === 'string' ? body.seat_id.trim() : '';
 
-    if (!eventId || !seatId) {
-      return NextResponse.json({ error: 'event_id y seat_id son requeridos' }, { status: 400 });
+    if (!seatId) {
+      return NextResponse.json({ error: 'seat_id es requerido' }, { status: 400 });
     }
 
     const cookieStore = await cookies();
@@ -27,12 +27,19 @@ export async function POST(request: NextRequest) {
       .from('registros')
       .select('id, nombre, template_id, attended_at, checked_in_seat_id')
       .eq('token', token)
-      .eq('template_id', eventId)
       .single();
 
     if (registroError || !registro) {
-      return NextResponse.json({ error: 'Invitacion invalida para este evento' }, { status: 401 });
+      return NextResponse.json({ error: 'Invitacion invalida' }, { status: 401 });
     }
+
+    if (eventIdFromQr && eventIdFromQr !== registro.template_id) {
+      return NextResponse.json({
+        error: 'Este QR pertenece a otro evento',
+      }, { status: 409 });
+    }
+
+    const eventId = eventIdFromQr || registro.template_id;
 
     const { data: assignment, error: assignmentError } = await supabase
       .from('assignments')

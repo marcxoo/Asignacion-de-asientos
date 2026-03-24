@@ -3,8 +3,8 @@ import { RowConfig, SeatCategory } from './types';
 // Row definitions matching the specific schema
 export const ROWS: RowConfig[] = [
   // Top Level: Wings (Far sides) and Cabin Flanks
-  { id: 'W', label: 'W', left: 14, right: 14, type: 'wing' },
-  { id: 'CB', label: 'K', left: 9, right: 9, type: 'cabin-flank' },
+  { id: 'W', label: 'L', left: 14, right: 14, type: 'wing' },
+  { id: 'CB', label: 'L', left: 9, right: 9, type: 'cabin-flank' },
 
   // Main Section - J down to A
   { id: 'R17', label: 'J', left: 17, right: 17, leftWallOffset: 0, leftAisleOffset: 0, rightWallOffset: 0, rightAisleOffset: 0 },
@@ -45,23 +45,35 @@ export function parseSeatId(seatId: string) {
   const num = parts[2];
   const row = ROWS.find(r => r.id === rowId);
 
+  // Dynamic label mapping for special sections
+  let label = row?.label ?? rowId;
+  if (rowId === 'W') {
+    if (section === 'WL2' || section === 'WR2') {
+      label = 'L';
+    } else {
+      label = 'K';
+    }
+  }
+
   const sectionLabels: Record<string, string> = {
     L: 'Ala Izquierda',
     R: 'Ala Derecha',
     C: 'Sección Central',
     WL: 'Ala Izq. Exterior',
     WR: 'Ala Der. Exterior',
-    CL: 'Cabina Izquierda',
-    CR: 'Cabina Derecha',
+    WL2: 'Ala Izq. Exterior (Fila Superior)',
+    WR2: 'Ala Der. Exterior (Fila Superior)',
+    CL: 'Ala Izquierda',
+    CR: 'Ala Derecha',
   };
 
   return {
     rowId,
     section,
     numero: parseInt(num),
-    label: row?.label ?? rowId,
+    label: label,
     sectionLabel: sectionLabels[section] ?? section,
-    display: `Fila ${row?.label ?? rowId} · ${sectionLabels[section] ?? section} · Asiento ${num}`,
+    display: `Fila ${label} · ${sectionLabels[section] ?? section} · Asiento ${num}`,
   };
 }
 

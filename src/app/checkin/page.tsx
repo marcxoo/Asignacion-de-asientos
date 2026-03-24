@@ -12,8 +12,8 @@ function SeatCheckinClient() {
   const [result, setResult] = useState<{ ok: boolean; message: string; detail?: string } | null>(null);
 
   const confirm = async () => {
-    if (!eventId || !seatId) {
-      setResult({ ok: false, message: 'QR invalido', detail: 'Faltan datos del evento o asiento.' });
+    if (!seatId) {
+      setResult({ ok: false, message: 'QR invalido', detail: 'Falta el identificador del asiento.' });
       return;
     }
 
@@ -22,7 +22,7 @@ function SeatCheckinClient() {
     const res = await fetch('/api/public/checkin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event_id: eventId, seat_id: seatId }),
+      body: JSON.stringify({ event_id: eventId || undefined, seat_id: seatId }),
     });
     const data = await res.json().catch(() => ({}));
 
