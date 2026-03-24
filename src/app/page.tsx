@@ -68,7 +68,7 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-4xl font-black text-white tracking-tighter leading-tight">
-            GRADUACIÓN <span className="text-orange block md:inline drop-shadow-[0_0_15px_rgba(255,105,0,0.4)]">2026</span>
+            SISTEMA DE <span className="text-orange block md:inline drop-shadow-[0_0_15px_rgba(255,105,0,0.4)]">EVENTOS</span>
           </h1>
           <div className="flex items-center justify-center gap-2 mt-3">
             <div className="h-px w-8 bg-white/20" />

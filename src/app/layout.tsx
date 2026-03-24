@@ -9,8 +9,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Asignación de Asientos — Graduación 2026",
-  description: "Sistema de asignación de asientos para ceremonia de graduación",
+  title: "Sistema de Asignación de Asientos",
+  description: "Sistema para reservación y control de acceso de asientos a eventos",
 };
 
 export default function RootLayout({

@@ -28,7 +28,7 @@ interface PublicAuditoriumViewProps {
   invitationToken?: string;
 }
 
-export function PublicAuditoriumView({ me, templateId, invitationToken }: PublicAuditoriumViewProps) {
+export function PublicAuditoriumView({ me, templateId, templateName, invitationToken }: PublicAuditoriumViewProps) {
   const [assignments, setAssignments] = useState<SeatState>({});
 
   useEffect(() => {
@@ -619,7 +619,13 @@ export function PublicAuditoriumView({ me, templateId, invitationToken }: Public
           <div className="absolute inset-0 bg-gradient-to-br from-orange/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="relative z-10">
             <h1 className="text-[28px] font-black text-white tracking-tighter leading-none">
-              Graduación <span className="text-orange drop-shadow-[0_0_15px_rgba(255,105,0,0.3)]">2026</span>
+              {(() => {
+                const name = templateName || 'Graduación 2026';
+                const words = name.trim().split(' ');
+                if (words.length === 1) return name;
+                const last = words.pop();
+                return <>{words.join(' ')} <span className="text-orange drop-shadow-[0_0_15px_rgba(255,105,0,0.3)]">{last}</span></>;
+              })()}
             </h1>
             <p className="text-[10px] font-extrabold text-slate-400 mt-2 uppercase tracking-[4px] opacity-70">
               Sistema de Asignación

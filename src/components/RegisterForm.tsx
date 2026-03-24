@@ -124,7 +124,13 @@ export function RegisterForm({ templateId, templateName, onSuccess }: RegisterFo
           </motion.div>
 
           <h1 className="text-4xl font-black text-white tracking-tighter leading-none mb-3">
-            {templateName || 'Graduación'} <span className="text-orange drop-shadow-[0_0_15px_rgba(255,105,0,0.3)]">{templateName ? '' : '2026'}</span>
+            {(() => {
+              const name = templateName || 'Graduación 2026';
+              const words = name.trim().split(' ');
+              if (words.length === 1) return name;
+              const last = words.pop();
+              return <>{words.join(' ')} <span className="text-orange drop-shadow-[0_0_15px_rgba(255,105,0,0.3)]">{last}</span></>;
+            })()}
           </h1>
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[5px] opacity-70">
             Sistema de Asignación
