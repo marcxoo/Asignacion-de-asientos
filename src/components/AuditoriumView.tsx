@@ -648,19 +648,34 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
             <p className="text-[10px] font-black text-slate-500 mt-2 uppercase tracking-[3px] opacity-60">Control Central</p>
           </motion.div>
           {activeTemplateId && (
-            <button
-              onClick={() => {
-                const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                const url = `${origin}/e/${activeTemplateId}`;
-                navigator.clipboard.writeText(url).then(() => {
-                  alert('¡Enlace copiado al portapapeles!\n' + url);
-                });
-              }}
-              className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 rounded-2xl text-emerald-400 text-xs font-bold transition-all group"
-            >
-              <LinkIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              Copiar Enlace de Invitados
-            </button>
+            <div className="mt-3 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                  const url = `${origin}/e/${activeTemplateId}`;
+                  navigator.clipboard.writeText(url).then(() => {
+                    alert('¡Enlace copiado al portapapeles!\n' + url);
+                  });
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 rounded-2xl text-emerald-400 text-xs font-bold transition-all group w-full"
+              >
+                <LinkIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                Copiar Enlace Público
+              </button>
+              <button
+                onClick={() => {
+                  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                  const url = `${origin}/e/${activeTemplateId}/institucional`;
+                  navigator.clipboard.writeText(url).then(() => {
+                    alert('¡Enlace Institucional copiado al portapapeles!\n' + url);
+                  });
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 rounded-2xl text-blue-400 text-xs font-bold transition-all group w-full"
+              >
+                <LinkIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                Copiar Enlace Institucional
+              </button>
+            </div>
           )}
         </div>
 

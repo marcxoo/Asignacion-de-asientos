@@ -15,16 +15,17 @@ interface RegisterFormProps {
   templateId: string;
   templateName?: string;
   onSuccess: () => void;
+  mode?: 'public' | 'institucional';
 }
 
 type ViewState = 'REGISTER' | 'LOGIN' | 'SUCCESS';
 
-export function RegisterForm({ templateId, templateName, onSuccess }: RegisterFormProps) {
+export function RegisterForm({ templateId, templateName, onSuccess, mode = 'public' }: RegisterFormProps) {
   const [viewState, setViewState] = useState<ViewState>('REGISTER');
 
   // Register State
   const [nombre, setNombre] = useState('');
-  const [categoria, setCategoria] = useState<SeatCategory>('invitado');
+  const [categoria, setCategoria] = useState<SeatCategory>(mode === 'institucional' ? 'docente' : 'estudiante');
 
   // Login State
   const [loginCode, setLoginCode] = useState('');
@@ -180,7 +181,12 @@ export function RegisterForm({ templateId, templateName, onSuccess }: RegisterFo
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       {(Object.entries(CATEGORY_CONFIG) as [SeatCategory, typeof CATEGORY_CONFIG['invitado']][])
-                        .filter(([key]) => key === 'invitado' || key === 'estudiante')
+                        .filter(([key]) => {
+                          if (mode === 'institucional') {
+                            return ['docente', 'administrativo', 'codigo_trabajo'].includes(key);
+                          }
+                          return ['invitado', 'estudiante'].includes(key);
+                        })
                         .map(([key, config]) => (
                           <button
                             key={key}
