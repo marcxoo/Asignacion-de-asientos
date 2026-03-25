@@ -25,83 +25,89 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const categoria = body.categoria as SeatCategory;
     const shouldSendEmail = body.send_email !== false;
 
-    if (!seatId || !nombre || !correo || !categoria) {
+    const isSpecialBlock = categoria === 'bloqueado';
+    if (!seatId || !nombre || (!correo && !isSpecialBlock) || !categoria) {
       return NextResponse.json({ error: 'seat_id, nombre, correo y categoria son requeridos' }, { status: 400 });
     }
     if (!VALID_CATEGORIES.includes(categoria)) {
       return NextResponse.json({ error: 'Categoria invalida' }, { status: 400 });
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+    if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
       return NextResponse.json({ error: 'Correo invalido' }, { status: 400 });
     }
 
     const supabase = createSupabaseServer();
 
-    const { data: existingRegistro, error: existingRegistroError } = await supabase
-      .from('registros')
-      .select('id, token, codigo_acceso')
-      .eq('template_id', eventId)
-      .eq('correo', correo)
-      .maybeSingle();
+    let registroId: string | null = null;
+    let registroToken: string | null = null;
 
-    if (existingRegistroError) {
-      return NextResponse.json({ error: existingRegistroError.message }, { status: 500 });
-    }
-
-    let registroId = existingRegistro?.id as string | undefined;
-    let registroToken = existingRegistro?.token as string | undefined;
-
-    if (!registroId) {
-      const { data: insertedRegistro, error: insertRegistroError } = await supabase
+    if (correo) {
+      const { data: existingRegistro, error: existingRegistroError } = await supabase
         .from('registros')
-        .insert({
-          nombre,
-          categoria,
-          correo,
-          template_id: eventId,
-          token: crypto.randomUUID(),
-          codigo_acceso: generateAccessCode(),
-          invitation_status: 'reserved',
-          invitation_reserved_at: new Date().toISOString(),
-        })
-        .select('id, token')
-        .single();
+        .select('id, token, codigo_acceso')
+        .eq('template_id', eventId)
+        .eq('correo', correo)
+        .maybeSingle();
 
-      if (insertRegistroError || !insertedRegistro) {
-        return NextResponse.json({ error: insertRegistroError?.message ?? 'No se pudo crear el registro' }, { status: 500 });
+      if (existingRegistroError) {
+        return NextResponse.json({ error: existingRegistroError.message }, { status: 500 });
       }
 
-      registroId = insertedRegistro.id;
-      registroToken = insertedRegistro.token;
-    } else {
-      const { error: updateRegistroError } = await supabase
-        .from('registros')
-        .update({
-          nombre,
-          categoria,
-          invitation_status: 'reserved',
-          invitation_reserved_at: new Date().toISOString(),
-          ...(existingRegistro?.codigo_acceso ? {} : { codigo_acceso: generateAccessCode() }),
-          ...(existingRegistro?.token ? {} : { token: crypto.randomUUID() }),
-        })
-        .eq('id', registroId);
+      registroId = existingRegistro?.id ?? null;
+      registroToken = existingRegistro?.token ?? null;
 
-      if (updateRegistroError) {
-        return NextResponse.json({ error: updateRegistroError.message }, { status: 500 });
-      }
-
-      if (!registroToken) {
-        const { data: refreshedRegistro, error: refreshedRegistroError } = await supabase
+      if (!registroId) {
+        const { data: insertedRegistro, error: insertRegistroError } = await supabase
           .from('registros')
-          .select('token')
-          .eq('id', registroId)
+          .insert({
+            nombre,
+            categoria,
+            correo,
+            template_id: eventId,
+            token: crypto.randomUUID(),
+            codigo_acceso: generateAccessCode(),
+            invitation_status: 'reserved',
+            invitation_reserved_at: new Date().toISOString(),
+          })
+          .select('id, token')
           .single();
 
-        if (refreshedRegistroError || !refreshedRegistro?.token) {
-          return NextResponse.json({ error: refreshedRegistroError?.message ?? 'No se pudo obtener token de registro' }, { status: 500 });
+        if (insertRegistroError || !insertedRegistro) {
+          return NextResponse.json({ error: insertRegistroError?.message ?? 'No se pudo crear el registro' }, { status: 500 });
         }
 
-        registroToken = refreshedRegistro.token;
+        registroId = insertedRegistro.id;
+        registroToken = insertedRegistro.token;
+      } else {
+        const { error: updateRegistroError } = await supabase
+          .from('registros')
+          .update({
+            nombre,
+            categoria,
+            invitation_status: 'reserved',
+            invitation_reserved_at: new Date().toISOString(),
+            ...(existingRegistro?.codigo_acceso ? {} : { codigo_acceso: generateAccessCode() }),
+            ...(existingRegistro?.token ? {} : { token: crypto.randomUUID() }),
+          })
+          .eq('id', registroId);
+
+        if (updateRegistroError) {
+          return NextResponse.json({ error: updateRegistroError.message }, { status: 500 });
+        }
+
+        if (!registroToken) {
+          const { data: refreshedRegistro, error: refreshedRegistroError } = await supabase
+            .from('registros')
+            .select('token')
+            .eq('id', registroId)
+            .single();
+
+          if (refreshedRegistroError || !refreshedRegistro?.token) {
+            return NextResponse.json({ error: refreshedRegistroError?.message ?? 'No se pudo obtener token de registro' }, { status: 500 });
+          }
+
+          registroToken = refreshedRegistro.token;
+        }
       }
     }
 
@@ -118,19 +124,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const previousSeatId = previousAssignments?.[0]?.seat_id ?? null;
 
-    const { error: releaseOldSeatError } = await supabase
-      .from('assignments')
-      .update({
-        nombre_invitado: 'Cupo Disponible',
-        registro_id: null,
-        categoria,
-      })
-      .eq('registro_id', registroId)
-      .eq('template_id', eventId)
-      .neq('seat_id', seatId);
+    if (registroId) {
+      const { error: releaseOldSeatError } = await supabase
+        .from('assignments')
+        .update({
+          nombre_invitado: 'Cupo Disponible',
+          registro_id: null,
+          categoria,
+        })
+        .eq('registro_id', registroId)
+        .eq('template_id', eventId)
+        .neq('seat_id', seatId);
 
-    if (releaseOldSeatError) {
-      return NextResponse.json({ error: releaseOldSeatError.message }, { status: 500 });
+      if (releaseOldSeatError) {
+        return NextResponse.json({ error: releaseOldSeatError.message }, { status: 500 });
+      }
     }
 
     const now = new Date().toISOString();
@@ -160,7 +168,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const isSeatChange = Boolean(previousSeatId && previousSeatId !== seatId);
 
-    if (shouldSendEmail) {
+    if (shouldSendEmail && correo) {
       const { data: templateData } = await supabase.from('templates').select('name').eq('id', eventId).single();
       const seatLabel = parseSeatId(seatId).display;
       const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;

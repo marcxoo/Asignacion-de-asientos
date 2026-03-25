@@ -127,7 +127,7 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
               </div>
             </div>
 
-            {requireEmail && !isBulk && (
+            {requireEmail && !isBulk && categoria !== 'bloqueado' && (
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] block ml-1">
                   Correo del Invitado
@@ -237,7 +237,7 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
 
               <button
                 type="submit"
-                disabled={!nombre.trim() || (requireEmail && !correo.trim() && !isBulk) || loading}
+                disabled={!nombre.trim() || (requireEmail && !correo.trim() && !isBulk && categoria !== 'bloqueado') || loading}
                 className="flex-[1.8] py-4 rounded-2xl text-sm font-black text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-2 group overflow-hidden relative"
                 style={{ backgroundColor: activeColor }}
               >
