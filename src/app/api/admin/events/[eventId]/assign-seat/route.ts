@@ -110,20 +110,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const { data: previousAssignments, error: previousAssignmentError } = await supabase
-      .from('assignments')
-      .select('seat_id')
-      .eq('registro_id', registroId)
-      .eq('template_id', eventId)
-      .limit(1);
-
-    if (previousAssignmentError) {
-      return NextResponse.json({ error: previousAssignmentError.message }, { status: 500 });
-    }
-
-    const previousSeatId = previousAssignments?.[0]?.seat_id ?? null;
-
+    let previousSeatId = null;
     if (registroId) {
+      const { data: previousAssignments, error: previousAssignmentError } = await supabase
+        .from('assignments')
+        .select('seat_id')
+        .eq('registro_id', registroId)
+        .eq('template_id', eventId)
+        .limit(1);
+
+      if (previousAssignmentError) {
+        return NextResponse.json({ error: previousAssignmentError.message }, { status: 500 });
+      }
+
+      previousSeatId = previousAssignments?.[0]?.seat_id ?? null;
+
       const { error: releaseOldSeatError } = await supabase
         .from('assignments')
         .update({
