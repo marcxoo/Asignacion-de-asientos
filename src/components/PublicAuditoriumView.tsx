@@ -724,10 +724,6 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
               >
                 {CATEGORY_CONFIG[me.categoria].label}
               </span>
-              <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-bold uppercase tracking-tight">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
-                En Línea
-              </div>
             </div>
           </div>
 

@@ -210,7 +210,8 @@ body::after {
 
 .seat.is-occupied::before,
 .seat.is-occupied::after {
-  background: #000;
+  background: #fff;
+  box-shadow: 0 0 5px rgba(255,255,255,0.3);
 }
 
 .seat.is-occupied .seat-cushion {
