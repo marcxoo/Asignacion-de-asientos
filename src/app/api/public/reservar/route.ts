@@ -29,14 +29,10 @@ export async function POST(request: NextRequest) {
       .eq('template_id', template_id)
       .maybeSingle();
 
-    // Release any previous seat this person had
+    // Release any previous seat this person had (delete so it becomes truly empty)
     await supabase
       .from('assignments')
-      .update({
-        nombre_invitado: 'Cupo Disponible',
-        registro_id: null,
-        categoria: registro.categoria,
-      })
+      .delete()
       .eq('registro_id', registro.id)
       .eq('template_id', template_id);
 

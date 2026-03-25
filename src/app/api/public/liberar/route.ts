@@ -34,11 +34,7 @@ export async function POST(request: NextRequest) {
 
     const { error } = await supabase
       .from('assignments')
-      .update({
-        nombre_invitado: 'Cupo Disponible',
-        registro_id: null,
-        categoria: registro.categoria,
-      })
+      .delete()
       .eq('seat_id', seat_id)
       .eq('template_id', template_id);
 
