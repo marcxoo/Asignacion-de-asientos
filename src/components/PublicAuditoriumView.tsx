@@ -498,7 +498,8 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
   function seatClass(seatId: string): string {
     const a = assignments[seatId];
     if (!a) return 'seat seat-disponible';
-    return `seat seat-${a.categoria}`;
+    const isOccupied = !!a.registro_id;
+    return `seat seat-${a.categoria}${isOccupied ? ' is-occupied' : ''}`;
   }
 
   function seatTooltip(seatId: string): string {
@@ -723,6 +724,10 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
               >
                 {CATEGORY_CONFIG[me.categoria].label}
               </span>
+              <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-bold uppercase tracking-tight">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
+                En Línea
+              </div>
             </div>
           </div>
 
@@ -832,18 +837,23 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
               <InformationCircleIcon className="w-3.5 h-3.5" />
               Referencia
             </h3>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              {(['docente', 'administrativo', 'codigo_trabajo', 'invitado', 'estudiante'] as const).map(cat => (
+                <div
+                  key={cat}
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.03] hover:border-white/10 transition-colors"
+                >
+                  <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: CATEGORY_CONFIG[cat].hex, boxShadow: `0 0 10px ${CATEGORY_CONFIG[cat].hex}40` }} />
+                  <span className="text-xs font-semibold text-slate-300 opacity-80">{CATEGORY_CONFIG[cat].label}</span>
+                </div>
+              ))}
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.03]">
                 <div className="w-2.5 h-2.5 rounded-full bg-slate-500/50 border border-white/10 shadow-inner" />
                 <span className="text-xs font-semibold text-slate-500">Disponible</span>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.03]">
-                <div className="w-2.5 h-2.5 rounded-full bg-orange/40 shadow-[0_0_10px_rgba(255,105,0,0.2)]" />
-                <span className="text-xs font-semibold text-slate-400">Reservado</span>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.03]">
-                <div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
-                <span className="text-xs font-semibold text-slate-200">Ocupado</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-white/20 border-2 border-white/40 shadow-[0_0_10px_rgba(255,255,255,0.2)]" />
+                <span className="text-xs font-semibold text-slate-400">Ocupado</span>
               </div>
             </div>
           </div>
