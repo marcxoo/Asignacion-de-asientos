@@ -13,8 +13,8 @@ interface AssignmentExportRow {
 const CATEGORY_FILL: Record<SeatCategory, string> = {
   autoridad: 'FF4F46E5',
   docente: 'FF0EA5E9',
-  administrativo: 'FF14B8A6',
-  codigo_trabajo: 'FFF59E0B',
+  administrativo: 'FFEC4899',
+  codigo_trabajo: 'FFEF4444',
   invitado: 'FF10B981',
   estudiante: 'FFF97316',
   bloqueado: 'FF312E81',
@@ -33,8 +33,8 @@ const CATEGORY_TEXT: Record<SeatCategory, string> = {
 const LIGHT_CATEGORY_FILL: Record<SeatCategory, string> = {
   autoridad: 'FFE0E7FF',
   docente: 'FFE0F2FE',
-  administrativo: 'FFCCFBF1',
-  codigo_trabajo: 'FFFEF3C7',
+  administrativo: 'FFFCE7F3',
+  codigo_trabajo: 'FFFEE2E2',
   invitado: 'FFDCFCE7',
   estudiante: 'FFFFEDD5',
   bloqueado: 'FFEDE9FE',

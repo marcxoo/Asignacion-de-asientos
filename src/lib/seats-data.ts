@@ -80,8 +80,8 @@ export function parseSeatId(seatId: string) {
 export const CATEGORY_CONFIG: Record<SeatCategory, { label: string; color: string; hex: string }> = {
   autoridad: { label: 'Autoridad', color: 'bg-indigo-600', hex: '#4f46e5' }, // Indigo
   docente: { label: 'Docente', color: 'bg-sky-500', hex: '#0ea5e9' },      // Sky Blue
-  administrativo: { label: 'Administrativo', color: 'bg-teal-500', hex: '#14b8a6' }, // Teal
-  codigo_trabajo: { label: 'Código de Trabajo', color: 'bg-amber-500', hex: '#f59e0b' }, // Amber
+  administrativo: { label: 'Administrativo', color: 'bg-pink-500', hex: '#ec4899' }, // Pink
+  codigo_trabajo: { label: 'Código de Trabajo', color: 'bg-red-500', hex: '#ef4444' }, // Red
   invitado: { label: 'Invitado', color: 'bg-emerald-500', hex: '#10b981' }, // Emerald
   estudiante: { label: 'Estudiante', color: 'bg-orange-500', hex: '#f97316' }, // Orange
   bloqueado: { label: 'Bloqueado / Reservado', color: 'bg-indigo-900', hex: '#312e81' }, // Indigo 900
