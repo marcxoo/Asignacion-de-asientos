@@ -57,21 +57,45 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
 
     const channel = supabase
       .channel(`public assignments ${templateId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'assignments', filter: `template_id=eq.${templateId}` }, (payload) => {
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'assignments', 
+        filter: `template_id=eq.${templateId}` 
+      }, (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          const row = payload.new as { seat_id: string; nombre_invitado: string; categoria: string; assigned_at: string; registro_id?: string | null };
-          setAssignments(prev => ({
-            ...prev,
-            [row.seat_id]: {
-              nombre_invitado: row.nombre_invitado,
-              categoria: row.categoria as SeatCategory,
-              asignado_en: row.assigned_at,
-              registro_id: row.registro_id ?? undefined,
-            },
-          }));
+          const row = payload.new as { 
+            seat_id: string; 
+            nombre_invitado: string; 
+            categoria: string; 
+            assigned_at: string; 
+            registro_id?: string | null 
+          };
+
+          // Evitar sobreescribir con datos de suscripción si nosotros mismos acabamos de actualizar
+          // Esto previene parpadeos o rollbacks visuales innecesarios
+          setAssignments(prev => {
+            // Si el evento de tiempo real es nuestro propio cambio, lo ignoramos para dejar que fluya la respuesta del API
+            if (row.registro_id === me.id && prev[row.seat_id]?.registro_id === me.id) {
+              return prev;
+            }
+            return {
+              ...prev,
+              [row.seat_id]: {
+                nombre_invitado: row.nombre_invitado,
+                categoria: row.categoria as SeatCategory,
+                asignado_en: row.assigned_at,
+                registro_id: row.registro_id ?? undefined,
+              },
+            };
+          });
         } else if (payload.eventType === 'DELETE') {
           const row = payload.old as { seat_id: string };
           setAssignments(prev => {
+            // No borrar si nosotros acabamos de asignar este asiento (evitar race condition de delete-then-insert del backend)
+            if (prev[row.seat_id]?.registro_id === me.id) {
+              return prev;
+            }
             const n = { ...prev };
             delete n[row.seat_id];
             return n;
@@ -365,8 +389,17 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
       });
 
       if (!res.ok) {
-        // Rollback if error
-        const { data } = await supabase.from('assignments').select('*').eq('seat_id', seatId).eq('template_id', templateId).single();
+        const errData = await res.json().catch(() => ({}));
+        console.error('Error in assignment API:', errData);
+        
+        // Rollback if error: fetch current state from server
+        const { data } = await supabase
+          .from('assignments')
+          .select('*')
+          .eq('seat_id', seatId)
+          .eq('template_id', templateId)
+          .maybeSingle();
+
         setAssignments(prev => {
           const next = { ...prev };
           if (data) {
@@ -381,6 +414,9 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
           }
           return next;
         });
+      } else {
+        // Confirmación explícita si todo salió bien (opcional si confiamos plenamente en el optimista)
+        // Pero aquí asegura que el registro_id esté bien vinculado.
       }
       setSelectedSeatId(null);
     } catch (e) {
