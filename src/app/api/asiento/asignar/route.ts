@@ -62,12 +62,28 @@ export async function POST(request: NextRequest) {
       await supabase.from('assignments').delete().eq('seat_id', seatId).eq('template_id', templateId);
     }
 
-    // 4. Liberar cualquier asiento anterior (eliminarlo completamente)
-    await supabase
+    // 4. Liberar el asiento anterior (si existe) pero RESTAURARLO como cupo disponible
+    // Buscamos cuál era el asiento que tenía este usuario
+    const { data: oldAssignment } = await supabase
       .from('assignments')
-      .delete()
+      .select('seat_id, categoria')
       .eq('registro_id', registro.id)
-      .eq('template_id', templateId);
+      .eq('template_id', templateId)
+      .maybeSingle();
+
+    if (oldAssignment) {
+      // En lugar de borrar, simplemente quitamos el registro_id y reseteamos el nombre.
+      // Así el asiento vuelve a estar disponible para esa misma categoría.
+      await supabase
+        .from('assignments')
+        .update({
+          registro_id: null,
+          nombre_invitado: 'Cupo Disponible',
+          assigned_at: new Date().toISOString()
+        })
+        .eq('seat_id', oldAssignment.seat_id)
+        .eq('template_id', templateId);
+    }
 
     // 5. Asignar el nuevo asiento
     const { error: insertError } = await supabase.from('assignments').insert({
