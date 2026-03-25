@@ -72,13 +72,14 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
             registro_id?: string | null 
           };
 
-          // Evitar sobreescribir con datos de suscripción si nosotros mismos acabamos de actualizar
-          // Esto previene parpadeos o rollbacks visuales innecesarios
           setAssignments(prev => {
-            // Si el evento de tiempo real es nuestro propio cambio, lo ignoramos para dejar que fluya la respuesta del API
+            // Caso 1: Es nuestro propio cambio optimista (evitar parpadeos)
             if (row.registro_id === me.id && prev[row.seat_id]?.registro_id === me.id) {
               return prev;
             }
+
+            // Caso 2: El asiento se ha restaurado (registro_id es null ahora)
+            // Actualizamos el estado para que se vea como "Cupo Disponible" inmediatamente
             return {
               ...prev,
               [row.seat_id]: {
