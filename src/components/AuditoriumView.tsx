@@ -738,17 +738,9 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
               <div className="space-y-4 pt-4 border-t border-white/5">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
                   <ClipboardDocumentIcon className="w-3.5 h-3.5" />
-                  QRs Check-in
+                  QRs Asientos
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={handleDownloadQrCsv}
-                    className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/20 transition-all group"
-                  >
-                    <ArrowDownTrayIcon className="w-5 h-5 text-sky-300 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-bold text-sky-300">CSV QR</span>
-                  </button>
-
+                <div className="grid grid-cols-1 gap-3">
                   <button
                     onClick={handleDownloadQrZip}
                     className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-orange/10 border border-orange/20 hover:bg-orange/20 transition-all group"
