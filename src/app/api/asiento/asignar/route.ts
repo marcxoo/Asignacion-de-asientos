@@ -62,14 +62,10 @@ export async function POST(request: NextRequest) {
       await supabase.from('assignments').delete().eq('seat_id', seatId).eq('template_id', templateId);
     }
 
-    // 4. Verificar si el usuario ya tiene OTRO asiento asignado en ESTE evento y liberarlo/revertirlo
+    // 4. Liberar cualquier asiento anterior (eliminarlo completamente)
     await supabase
       .from('assignments')
-      .update({
-        nombre_invitado: 'Cupo Disponible',
-        registro_id: null,
-        categoria: registro.categoria
-      })
+      .delete()
       .eq('registro_id', registro.id)
       .eq('template_id', templateId);
 

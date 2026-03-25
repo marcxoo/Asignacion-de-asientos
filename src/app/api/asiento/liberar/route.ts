@@ -49,18 +49,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: updateError } = await supabase
+    const { error: deleteError } = await supabase
       .from('assignments')
-      .update({
-        nombre_invitado: 'Cupo Disponible',
-        registro_id: null,
-        categoria: registro.categoria || 'docente'
-      })
+      .delete()
       .eq('seat_id', seatId)
       .eq('template_id', templateId);
 
-    if (updateError) {
-      console.error('Error releasing seat:', updateError);
+    if (deleteError) {
+      console.error('Error releasing seat:', deleteError);
       return NextResponse.json({ error: 'Error al liberar asiento' }, { status: 500 });
     }
 
