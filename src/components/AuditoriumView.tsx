@@ -480,16 +480,31 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
     });
     setIsBulkModalOpen(false);
 
-    // 2. Supabase Upsert
-    const updates = Array.from(selectedSeatIds).map(id => ({
-      seat_id: id,
-      nombre_invitado: nombre,
-      categoria: categoria,
-      assigned_at: now,
-      template_id: activeTemplateId
-    }));
+    // 2. Fetch existing assignments to get IDs
+    const { data: existing } = await supabase
+      .from('assignments')
+      .select('id, seat_id')
+      .eq('template_id', activeTemplateId)
+      .in('seat_id', Array.from(selectedSeatIds));
 
-    const { error } = await supabase.from('assignments').upsert(updates, { onConflict: 'template_id,seat_id' });
+    const existingMap = new Map((existing || []).map(r => [r.seat_id, r.id]));
+
+    // 3. Supabase Upsert with explicit IDs
+    const updates = Array.from(selectedSeatIds).map(id => {
+      const updateObj: any = {
+        seat_id: id,
+        nombre_invitado: nombre,
+        categoria: categoria,
+        assigned_at: now,
+        template_id: activeTemplateId
+      };
+      if (existingMap.has(id)) {
+        updateObj.id = existingMap.get(id);
+      }
+      return updateObj;
+    });
+
+    const { error } = await supabase.from('assignments').upsert(updates);
 
     if (error) {
       console.error('Error bulk assigning:', error);

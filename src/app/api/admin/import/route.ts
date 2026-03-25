@@ -49,9 +49,25 @@ export async function POST(request: Request) {
         }
 
         if (updates.length > 0) {
+            const seatIds = updates.map(u => u.seat_id);
+            const { data: existing } = await supabase
+                .from('assignments')
+                .select('id, seat_id')
+                .eq('template_id', templateId)
+                .in('seat_id', seatIds);
+
+            const existingMap = new Map((existing || []).map(r => [r.seat_id, r.id]));
+
+            const finalUpdates = updates.map(u => {
+                if (existingMap.has(u.seat_id)) {
+                    return { ...u, id: existingMap.get(u.seat_id) };
+                }
+                return u;
+            });
+
             const { error } = await supabase
                 .from('assignments')
-                .upsert(updates, { onConflict: 'template_id,seat_id' });
+                .upsert(finalUpdates);
 
             if (error) {
                 console.error('Error updating assignments:', error);

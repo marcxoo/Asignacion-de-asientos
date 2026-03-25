@@ -153,16 +153,31 @@ export function SharedAuditoriumView({ templateId, eventName }: SharedAuditorium
             return next;
         });
 
-        // 2. Supabase Upsert
-        const updates = Array.from(selectedSeatIds).map(id => ({
-            seat_id: id,
-            nombre_invitado: defaultName,
-            categoria: selectedCategory,
-            assigned_at: now,
-            template_id: templateId
-        }));
+        // 2. Fetch existing assignments to get their IDs
+        const { data: existing } = await supabase
+            .from('assignments')
+            .select('id, seat_id')
+            .eq('template_id', templateId)
+            .in('seat_id', Array.from(selectedSeatIds));
 
-        const { error } = await supabase.from('assignments').upsert(updates, { onConflict: 'template_id,seat_id' });
+        const existingMap = new Map((existing || []).map(r => [r.seat_id, r.id]));
+
+        // 3. Supabase Upsert with explicit IDs
+        const updates = Array.from(selectedSeatIds).map(id => {
+            const updateObj: any = {
+                seat_id: id,
+                nombre_invitado: defaultName,
+                categoria: selectedCategory,
+                assigned_at: now,
+                template_id: templateId
+            };
+            if (existingMap.has(id)) {
+                updateObj.id = existingMap.get(id);
+            }
+            return updateObj;
+        });
+
+        const { error } = await supabase.from('assignments').upsert(updates);
 
         if (error) {
             console.error('Error reserving:', error);
