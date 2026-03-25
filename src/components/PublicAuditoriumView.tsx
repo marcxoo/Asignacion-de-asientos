@@ -1169,3 +1169,4 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     </div>
   );
 }
+ 
