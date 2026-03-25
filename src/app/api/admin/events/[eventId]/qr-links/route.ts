@@ -70,8 +70,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         });
 
         const index = String(i + 1).padStart(3, '0');
-        const safeSeat = row.seat_id.replace(/[^a-zA-Z0-9\-_]/g, '_');
-        qrFolder.file(`${index}_${safeSeat}.png`, qrPng);
+        const safeSection = row.seccion.replace(/[^a-zA-Z0-9\u00C0-\u017F\s]/g, '').replace(/\s+/g, '-');
+        qrFolder.file(`${index}_Fila-${row.fila}_Asiento-${row.asiento_numero}_${safeSection}.png`, qrPng);
       }
     }
 
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 function buildCsv(rows: Array<{ seat_id: string; fila: string; seccion: string; asiento_numero: number; display: string; checkin_url: string }>) {
-  const header = ['seat_id', 'fila', 'seccion', 'asiento_numero', 'display', 'checkin_url'];
+  const header = ['ID Asiento', 'Fila', 'Sección', 'Número', 'Referencia', 'URL Check-in'];
   const escapeCsv = (value: string | number) => {
     const raw = String(value ?? '');
     if (raw.includes(',') || raw.includes('"') || raw.includes('\n')) {
