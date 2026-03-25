@@ -838,12 +838,12 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
                 <span className="text-xs font-semibold text-slate-500">Disponible</span>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.03]">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#FF6900] shadow-[0_0_10px_#FF690040]" />
-                <span className="text-xs font-semibold text-slate-300 opacity-80">Reservado</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-orange/40 shadow-[0_0_10px_rgba(255,105,0,0.2)]" />
+                <span className="text-xs font-semibold text-slate-400">Reservado</span>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.03]">
-                <div className="w-2.5 h-2.5 rounded-full bg-white/20 border border-white/10" />
-                <span className="text-xs font-semibold text-slate-400">Ocupado</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+                <span className="text-xs font-semibold text-slate-200">Ocupado</span>
               </div>
             </div>
           </div>
