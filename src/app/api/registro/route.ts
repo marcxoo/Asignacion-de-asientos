@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const categoria = body.categoria;
     const templateId = body.template_id; // Event ID
 
-    const validCategories = ['autoridad', 'docente', 'invitado', 'estudiante'];
+    const validCategories = ['autoridad', 'docente', 'administrativo', 'codigo_trabajo', 'invitado', 'estudiante'];
     if (!nombre || !validCategories.includes(categoria) || !templateId) {
       return NextResponse.json(
         { error: 'Nombre, categoría y ID de evento son requeridos' },
