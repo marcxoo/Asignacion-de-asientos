@@ -49,19 +49,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: updateError } = await supabase
-      .from('assignments')
-      .update({
-        registro_id: null,
-        nombre_invitado: 'Cupo Disponible',
-        assigned_at: new Date().toISOString()
-      })
-      .eq('seat_id', seatId)
-      .eq('template_id', templateId);
+    const institutionalCategories = ['autoridad', 'docente', 'administrativo', 'codigo_trabajo'];
+    const shouldRestore = institutionalCategories.includes(registro.categoria);
 
-    if (updateError) {
-      console.error('Error releasing seat:', updateError);
-      return NextResponse.json({ error: 'Error al liberar asiento' }, { status: 500 });
+    if (shouldRestore) {
+      const { error: updateError } = await supabase
+        .from('assignments')
+        .update({
+          registro_id: null,
+          nombre_invitado: 'Cupo Disponible',
+          assigned_at: new Date().toISOString()
+        })
+        .eq('seat_id', seatId)
+        .eq('template_id', templateId);
+
+      if (updateError) {
+        console.error('Error releasing seat:', updateError);
+        return NextResponse.json({ error: 'Error al liberar asiento' }, { status: 500 });
+      }
+    } else {
+      const { error: deleteError } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('seat_id', seatId)
+        .eq('template_id', templateId);
+
+      if (deleteError) {
+        console.error('Error releasing seat:', deleteError);
+        return NextResponse.json({ error: 'Error al liberar asiento' }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ success: true });

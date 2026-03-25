@@ -72,17 +72,28 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (oldAssignment) {
-      // En lugar de borrar, simplemente quitamos el registro_id y reseteamos el nombre.
-      // Así el asiento vuelve a estar disponible para esa misma categoría.
-      await supabase
-        .from('assignments')
-        .update({
-          registro_id: null,
-          nombre_invitado: 'Cupo Disponible',
-          assigned_at: new Date().toISOString()
-        })
-        .eq('seat_id', oldAssignment.seat_id)
-        .eq('template_id', templateId);
+      // SOLO restauramos si es una categoría institucional que requiere reserva previa.
+      // Estudiantes e Invitados (zonas libres) se eliminan para que queden grises.
+      const institutionalCategories = ['autoridad', 'docente', 'administrativo', 'codigo_trabajo'];
+      const shouldRestore = institutionalCategories.includes(oldAssignment.categoria);
+
+      if (shouldRestore) {
+        await supabase
+          .from('assignments')
+          .update({
+            registro_id: null,
+            nombre_invitado: 'Cupo Disponible',
+            assigned_at: new Date().toISOString()
+          })
+          .eq('seat_id', oldAssignment.seat_id)
+          .eq('template_id', templateId);
+      } else {
+        await supabase
+          .from('assignments')
+          .delete()
+          .eq('seat_id', oldAssignment.seat_id)
+          .eq('template_id', templateId);
+      }
     }
 
     // 5. Asignar el nuevo asiento
