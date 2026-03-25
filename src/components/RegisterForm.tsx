@@ -180,7 +180,7 @@ export function RegisterForm({ templateId, templateName, onSuccess }: RegisterFo
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       {(Object.entries(CATEGORY_CONFIG) as [SeatCategory, typeof CATEGORY_CONFIG['invitado']][])
-                        .filter(([key]) => key !== 'autoridad' && key !== 'bloqueado')
+                        .filter(([key]) => key === 'invitado' || key === 'estudiante')
                         .map(([key, config]) => (
                           <button
                             key={key}
