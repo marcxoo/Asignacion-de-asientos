@@ -25,9 +25,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const categoria = body.categoria as SeatCategory;
     const shouldSendEmail = body.send_email !== false;
 
-    const isSpecialBlock = categoria === 'bloqueado';
-    if (!seatId || !nombre || (!correo && !isSpecialBlock) || !categoria) {
-      return NextResponse.json({ error: 'seat_id, nombre, correo y categoria son requeridos' }, { status: 400 });
+    if (!seatId || !nombre || !categoria) {
+      return NextResponse.json({ error: 'seat_id, nombre y categoria son requeridos' }, { status: 400 });
     }
     if (!VALID_CATEGORIES.includes(categoria)) {
       return NextResponse.json({ error: 'Categoria invalida' }, { status: 400 });

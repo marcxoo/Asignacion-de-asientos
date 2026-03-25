@@ -127,10 +127,10 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
               </div>
             </div>
 
-            {requireEmail && !isBulk && categoria !== 'bloqueado' && (
+            {requireEmail && !isBulk && (
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] block ml-1">
-                  Correo del Invitado
+                  Correo del Invitado (Opcional)
                 </label>
                 <div className="relative group">
                   <input
@@ -138,8 +138,7 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
                     value={correo}
                     onChange={(e) => setCorreo(e.target.value)}
                     className="w-full bg-black/20 border border-white/5 rounded-2xl px-4 py-4 text-white focus:ring-4 focus:ring-orange/10 focus:border-orange/40 transition-all outline-none placeholder:text-slate-700 font-semibold"
-                    placeholder="correo@ejemplo.com"
-                    required
+                    placeholder="Dejar en blanco para reserva genérica..."
                   />
                 </div>
               </div>
@@ -182,10 +181,10 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
                     onClick={() => {
                       setCategoria(key);
                       // Auto-fill specialized categories
-                      if (!nombre) {
+                      if (!nombre || nombre === 'Reservado' || nombre === TEACHER_SLOT_LABEL) {
                         if (key === 'docente') {
                           setNombre(TEACHER_SLOT_LABEL);
-                        } else if (key === 'bloqueado' || key === 'autoridad') {
+                        } else {
                           setNombre('Reservado');
                         }
                       }
@@ -237,7 +236,7 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
 
               <button
                 type="submit"
-                disabled={!nombre.trim() || (requireEmail && !correo.trim() && !isBulk && categoria !== 'bloqueado') || loading}
+                disabled={!nombre.trim() || loading}
                 className="flex-[1.8] py-4 rounded-2xl text-sm font-black text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-2 group overflow-hidden relative"
                 style={{ backgroundColor: activeColor }}
               >
