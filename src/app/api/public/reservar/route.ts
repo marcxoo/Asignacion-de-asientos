@@ -29,18 +29,7 @@ export async function POST(request: NextRequest) {
       .eq('template_id', template_id)
       .maybeSingle();
 
-    if (!existing) {
-      return NextResponse.json({ error: 'El asiento no existe para este evento' }, { status: 404 });
-    }
-
-    const isFreeSlot =
-      existing.categoria === registro.categoria &&
-      (!existing.registro_id || existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
-
-    if (!isFreeSlot && existing.registro_id !== registro.id) {
-      return NextResponse.json({ error: 'Asiento no disponible para tu categoría' }, { status: 409 });
-    }
-
+    // Release any previous seat this person had
     await supabase
       .from('assignments')
       .update({
@@ -51,19 +40,46 @@ export async function POST(request: NextRequest) {
       .eq('registro_id', registro.id)
       .eq('template_id', template_id);
 
-    const { error: updateError } = await supabase
-      .from('assignments')
-      .update({
-        nombre_invitado: registro.nombre,
-        categoria: registro.categoria,
-        registro_id: registro.id,
-        assigned_at: new Date().toISOString(),
-      })
-      .eq('seat_id', seat_id)
-      .eq('template_id', template_id);
+    if (!existing) {
+      // Empty seat — insert a new assignment (self-service for invitados/estudiantes)
+      const { error: insertError } = await supabase
+        .from('assignments')
+        .insert({
+          seat_id,
+          nombre_invitado: registro.nombre,
+          categoria: registro.categoria,
+          registro_id: registro.id,
+          assigned_at: new Date().toISOString(),
+          template_id,
+        });
 
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+      if (insertError) {
+        return NextResponse.json({ error: insertError.message }, { status: 500 });
+      }
+    } else {
+      // Seat already has an assignment row
+      const isFreeSlot =
+        existing.categoria === registro.categoria &&
+        (!existing.registro_id || existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
+
+      if (!isFreeSlot && existing.registro_id !== registro.id) {
+        return NextResponse.json({ error: 'Asiento no disponible para tu categoría' }, { status: 409 });
+      }
+
+      const { error: updateError } = await supabase
+        .from('assignments')
+        .update({
+          nombre_invitado: registro.nombre,
+          categoria: registro.categoria,
+          registro_id: registro.id,
+          assigned_at: new Date().toISOString(),
+        })
+        .eq('seat_id', seat_id)
+        .eq('template_id', template_id);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
     }
 
     await supabase

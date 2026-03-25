@@ -311,9 +311,9 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     if (me.categoria === 'docente') {
       if (!isTeacherSlot) return;
     } else if (me.categoria === 'invitado') {
-      if (!isGuestSlot) return;
+      if (!isGuestSlot && assignment) return;
     } else if (me.categoria === 'estudiante') {
-      if (!isStudentSlot) return;
+      if (!isStudentSlot && assignment) return;
     } else if (me.categoria === 'administrativo') {
       if (!isAdminSlot) return;
     } else if (me.categoria === 'codigo_trabajo') {
@@ -499,10 +499,10 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
       if (isTeacherSlot || isMySeat) isSelectable = true;
       else isBlocked = true;
     } else if (me.categoria === 'invitado') {
-      if (isGuestSlot || isMySeat) isSelectable = true;
+      if (isGuestSlot || !assignment || isMySeat) isSelectable = true;
       else isBlocked = true;
     } else if (me.categoria === 'estudiante') {
-      if (isStudentSlot || isMySeat) isSelectable = true;
+      if (isStudentSlot || !assignment || isMySeat) isSelectable = true;
       else isBlocked = true;
     } else if (me.categoria === 'administrativo') {
       if (isAdminSlot || isMySeat) isSelectable = true;
@@ -599,9 +599,9 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     if (me.categoria === 'docente') {
       return isTeacherSlot || isMySeat;
     } else if (me.categoria === 'invitado') {
-      return isGuestSlot || isMySeat;
+      return isGuestSlot || !assignment || isMySeat;
     } else if (me.categoria === 'estudiante') {
-      return isStudentSlot || isMySeat;
+      return isStudentSlot || !assignment || isMySeat;
     } else if (me.categoria === 'administrativo') {
       return isAdminSlot || isMySeat;
     } else if (me.categoria === 'codigo_trabajo') {
