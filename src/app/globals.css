@@ -142,6 +142,26 @@ body::after {
   background: linear-gradient(180deg, #6ee7b7 0%, #10b981 100%);
 }
 
+/* Administrativo (Teal) */
+.seat.seat-administrativo {
+  background: linear-gradient(180deg, #14b8a6 0%, #0f766e 100%);
+  border-top-color: #0f766e;
+}
+
+.seat.seat-administrativo .seat-cushion {
+  background: linear-gradient(180deg, #5eead4 0%, #14b8a6 100%);
+}
+
+/* Código de Trabajo (Amber) */
+.seat.seat-codigo_trabajo {
+  background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+  border-top-color: #b45309;
+}
+
+.seat.seat-codigo_trabajo .seat-cushion {
+  background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+}
+
 /* Student (Orange / Sunset) */
 .seat.seat-estudiante {
   background: linear-gradient(180deg, #f97316 0%, #c2410c 100%);

@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import { CsvInviteRow, SeatCategory } from '@/lib/types';
 
-const VALID_CATEGORIES = new Set<SeatCategory>(['autoridad', 'docente', 'invitado', 'estudiante']);
+const VALID_CATEGORIES = new Set<SeatCategory>(['autoridad', 'docente', 'administrativo', 'codigo_trabajo', 'invitado', 'estudiante']);
 
 type RawRow = Record<string, unknown>;
 

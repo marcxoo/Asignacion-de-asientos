@@ -281,6 +281,8 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
       available: totalSeats - assigned,
       autoridades: entries.filter(a => a?.categoria === 'autoridad').length,
       docentes: entries.filter(a => a?.categoria === 'docente').length,
+      administrativos: entries.filter(a => a?.categoria === 'administrativo').length,
+      codigo_trabajo: entries.filter(a => a?.categoria === 'codigo_trabajo').length,
       invitados: entries.filter(a => a?.categoria === 'invitado').length,
       estudiantes: entries.filter(a => a?.categoria === 'estudiante').length,
       bloqueados: entries.filter(a => a?.categoria === 'bloqueado').length,
@@ -795,7 +797,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
               <div className="pt-8 border-t border-white/5">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] mb-6">Referencia</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {(['autoridad', 'docente', 'invitado', 'estudiante', 'bloqueado'] as const).map(cat => (
+                  {(['autoridad', 'docente', 'administrativo', 'codigo_trabajo', 'invitado', 'estudiante', 'bloqueado'] as const).map(cat => (
                     <div key={cat} className="flex items-center gap-3 text-[11px] font-bold text-slate-400 p-2 rounded-xl bg-white/[0.02]">
                       <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: CATEGORY_CONFIG[cat].hex }} />
                       <span className="tracking-wide">{CATEGORY_CONFIG[cat].label}</span>

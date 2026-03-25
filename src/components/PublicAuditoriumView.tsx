@@ -299,6 +299,8 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     const isTeacherSlot = assignment?.categoria === 'docente' && !assignment?.registro_id;
     const isGuestSlot = assignment?.categoria === 'invitado' && !assignment?.registro_id;
     const isStudentSlot = assignment?.categoria === 'estudiante' && !assignment?.registro_id;
+    const isAdminSlot = assignment?.categoria === 'administrativo' && !assignment?.registro_id;
+    const isCodTrabajoSlot = assignment?.categoria === 'codigo_trabajo' && !assignment?.registro_id;
     const isMySeat = seatId === mySeatId;
 
     if (isMySeat) {
@@ -312,6 +314,10 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
       if (!isGuestSlot) return;
     } else if (me.categoria === 'estudiante') {
       if (!isStudentSlot) return;
+    } else if (me.categoria === 'administrativo') {
+      if (!isAdminSlot) return;
+    } else if (me.categoria === 'codigo_trabajo') {
+      if (!isCodTrabajoSlot) return;
     } else {
       if (assignment) return;
     }
@@ -771,7 +777,7 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
               Referencia
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              {(['docente', 'invitado', 'estudiante'] as const).map(cat => (
+              {(['docente', 'administrativo', 'codigo_trabajo', 'invitado', 'estudiante'] as const).map(cat => (
                 <div
                   key={cat}
                   className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.03] hover:border-white/10 transition-colors"

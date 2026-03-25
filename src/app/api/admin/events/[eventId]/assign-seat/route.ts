@@ -12,7 +12,7 @@ function generateAccessCode(length = 8): string {
   return Math.random().toString(36).slice(2, 2 + length).toUpperCase();
 }
 
-const VALID_CATEGORIES: SeatCategory[] = ['autoridad', 'docente', 'invitado', 'estudiante', 'bloqueado'];
+const VALID_CATEGORIES: SeatCategory[] = ['autoridad', 'docente', 'administrativo', 'codigo_trabajo', 'invitado', 'estudiante', 'bloqueado'];
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {

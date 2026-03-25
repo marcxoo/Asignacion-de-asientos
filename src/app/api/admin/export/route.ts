@@ -13,6 +13,8 @@ interface AssignmentExportRow {
 const CATEGORY_FILL: Record<SeatCategory, string> = {
   autoridad: 'FF4F46E5',
   docente: 'FF0EA5E9',
+  administrativo: 'FF14B8A6',
+  codigo_trabajo: 'FFF59E0B',
   invitado: 'FF10B981',
   estudiante: 'FFF97316',
   bloqueado: 'FF312E81',
@@ -21,6 +23,8 @@ const CATEGORY_FILL: Record<SeatCategory, string> = {
 const CATEGORY_TEXT: Record<SeatCategory, string> = {
   autoridad: 'FFFFFFFF',
   docente: 'FF0B1220',
+  administrativo: 'FF0B1220',
+  codigo_trabajo: 'FF0B1220',
   invitado: 'FF0B1220',
   estudiante: 'FF0B1220',
   bloqueado: 'FFFFFFFF',
@@ -29,6 +33,8 @@ const CATEGORY_TEXT: Record<SeatCategory, string> = {
 const LIGHT_CATEGORY_FILL: Record<SeatCategory, string> = {
   autoridad: 'FFE0E7FF',
   docente: 'FFE0F2FE',
+  administrativo: 'FFCCFBF1',
+  codigo_trabajo: 'FFFEF3C7',
   invitado: 'FFDCFCE7',
   estudiante: 'FFFFEDD5',
   bloqueado: 'FFEDE9FE',
@@ -156,6 +162,8 @@ function createVisualMapSheet(
     { label: 'Disponible', color: 'FF334155' },
     { label: 'Autoridad', color: CATEGORY_FILL.autoridad },
     { label: 'Docente', color: CATEGORY_FILL.docente },
+    { label: 'Administr.', color: CATEGORY_FILL.administrativo },
+    { label: 'C. Trabajo', color: CATEGORY_FILL.codigo_trabajo },
     { label: 'Invitado', color: CATEGORY_FILL.invitado },
     { label: 'Estudiante', color: CATEGORY_FILL.estudiante },
     { label: 'Bloqueado', color: CATEGORY_FILL.bloqueado },
@@ -346,7 +354,7 @@ function createDynamicTablesSheet(
   sheet.getCell('E3').value = 'Por Fila';
   sheet.getCell('E3').font = { bold: true, color: { argb: 'FF1E293B' } };
 
-  const categories = ['autoridad', 'docente', 'invitado', 'estudiante', 'bloqueado'];
+  const categories = ['autoridad', 'docente', 'administrativo', 'codigo_trabajo', 'invitado', 'estudiante', 'bloqueado'];
   categories.forEach((cat, i) => {
     const row = 5 + i;
     sheet.getCell(row, 1).value = cat;
@@ -426,7 +434,7 @@ function createInstructionsSheet(workbook: ExcelJS.Workbook) {
     '2) Columnas obligatorias para importar: "Seat ID", "Nombre Invitado", "Categoría".',
     '3) Puedes hacer clic en Seat ID o Nombre en "Asignaciones" para saltar directo a su asiento en "Mapa Visual".',
     '4) No cambies los encabezados ni elimines la tabla "TablaAsignaciones".',
-    '5) Categorias validas: autoridad, docente, invitado, estudiante, bloqueado.',
+    '5) Categorias validas: autoridad, docente, administrativo, codigo_trabajo, invitado, estudiante, bloqueado.',
     '6) La hoja "Mapa Visual" replica el layout del auditorio para ubicar lugares rapidamente.',
     '7) La hoja "Tablas Dinamicas" incluye tablas y formulas para analisis rapido por categoria y fila.',
   ];
@@ -484,6 +492,8 @@ export async function GET(request: NextRequest) {
   const counts: Record<SeatCategory, number> = {
     autoridad: 0,
     docente: 0,
+    administrativo: 0,
+    codigo_trabajo: 0,
     invitado: 0,
     estudiante: 0,
     bloqueado: 0,
