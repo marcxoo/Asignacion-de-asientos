@@ -361,13 +361,25 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     const seatId = selectedSeatId;
     setAssignments(prev => {
       const next = { ...prev };
-      // Liberar cualquier asiento anterior que tuviera este usuario
+      // Liberar cualquier asiento anterior que tuviera este usuario (Optimista)
       Object.keys(next).forEach(key => {
         if (next[key]?.registro_id === me.id) {
-          delete next[key];
+          // IMPORTANT: En lugar de borrarlo completamente, lo marcamos como disponible 
+          // de forma temporal para evitar el hueco gris si el tiempo real tarda.
+          const oldCat = next[key]?.categoria;
+          if (oldCat) {
+            next[key] = {
+              nombre_invitado: 'Cupo Disponible',
+              categoria: oldCat,
+              asignado_en: new Date().toISOString(),
+              registro_id: null
+            };
+          } else {
+            delete next[key];
+          }
         }
       });
-      // Asignar el nuevo
+      // Asignar el nuevo (Optimista)
       next[seatId] = {
         nombre_invitado: me.nombre,
         categoria: me.categoria,
@@ -435,7 +447,16 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     const seatId = selectedSeatId;
     setAssignments(prev => {
       const n = { ...prev };
-      delete n[seatId];
+      const current = n[seatId];
+      if (current) {
+        n[seatId] = {
+          ...current,
+          nombre_invitado: 'Cupo Disponible',
+          registro_id: null
+        };
+      } else {
+        delete n[seatId];
+      }
       return n;
     });
 
