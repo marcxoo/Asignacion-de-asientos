@@ -339,13 +339,7 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
       // Liberar cualquier asiento anterior que tuviera este usuario
       Object.keys(next).forEach(key => {
         if (next[key]?.registro_id === me.id) {
-          // Revertir a Cupo Disponible manteniendo la categoría del usuario
-          next[key] = {
-            nombre_invitado: 'Cupo Disponible',
-            categoria: me.categoria,
-            asignado_en: new Date().toISOString(),
-            registro_id: null
-          };
+          delete next[key];
         }
       });
       // Asignar el nuevo
@@ -404,13 +398,7 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     const seatId = selectedSeatId;
     setAssignments(prev => {
       const n = { ...prev };
-      // Revert triggers to Cupo Disponible
-      n[seatId] = {
-        nombre_invitado: 'Cupo Disponible',
-        categoria: me.categoria,
-        asignado_en: new Date().toISOString(),
-        registro_id: null
-      };
+      delete n[seatId];
       return n;
     });
 
