@@ -8,6 +8,9 @@ interface AssignmentExportRow {
   seat_id: string;
   nombre_invitado: string;
   categoria: SeatCategory;
+  registro_id?: string | null;
+  attended_at?: string | null;
+  checked_in_at?: string | null;
 }
 
 const CATEGORY_FILL: Record<SeatCategory, string> = {
@@ -455,14 +458,36 @@ export async function GET(request: NextRequest) {
   const supabase = createSupabaseServer();
   const { data: assignments, error } = await supabase
     .from('assignments')
-    .select('seat_id, nombre_invitado, categoria')
+    .select('seat_id, nombre_invitado, categoria, registro_id')
     .eq('template_id', templateId);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const safeAssignments = (assignments ?? []) as AssignmentExportRow[];
+  // Fetch attendance data from registros
+  const registroIds = (assignments ?? []).map(a => a.registro_id).filter(Boolean) as string[];
+  let registrosMap = new Map<string, { attended_at: string | null; checked_in_at: string | null }>();
+  if (registroIds.length > 0) {
+    const { data: registros } = await supabase
+      .from('registros')
+      .select('id, attended_at, checked_in_at')
+      .in('id', registroIds);
+    if (registros) {
+      registros.forEach((r: { id: string; attended_at: string | null; checked_in_at: string | null }) => {
+        registrosMap.set(r.id, { attended_at: r.attended_at, checked_in_at: r.checked_in_at });
+      });
+    }
+  }
+
+  const safeAssignments: AssignmentExportRow[] = (assignments ?? []).map(a => {
+    const reg = a.registro_id ? registrosMap.get(a.registro_id) : undefined;
+    return {
+      ...a,
+      attended_at: reg?.attended_at ?? null,
+      checked_in_at: reg?.checked_in_at ?? null,
+    };
+  });
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Sistema de Asientos';
   workbook.created = new Date();
@@ -479,6 +504,8 @@ export async function GET(request: NextRequest) {
     { header: 'Fila', key: 'fila', width: 10 },
     { header: 'Número', key: 'numero', width: 10 },
     { header: 'Sección', key: 'seccion', width: 25 },
+    { header: 'Asistencia', key: 'asistencia', width: 16 },
+    { header: 'Hora Check-in', key: 'checkin', width: 22 },
   ];
 
   sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
@@ -516,7 +543,11 @@ export async function GET(request: NextRequest) {
 
   safeAssignments.forEach((a) => {
     const { label, numero, sectionLabel } = parseSeatId(a.seat_id);
-    rowsForTable.push([a.seat_id, a.nombre_invitado, a.categoria, label, numero, sectionLabel]);
+    const asistencia = a.attended_at ? '✅ Confirmada' : '—';
+    const checkinTime = a.checked_in_at
+      ? new Date(a.checked_in_at).toLocaleString('es-EC', { timeZone: 'America/Guayaquil', hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
+      : '';
+    rowsForTable.push([a.seat_id, a.nombre_invitado, a.categoria, label, numero, sectionLabel, asistencia, checkinTime]);
     counts[a.categoria] += 1;
     if (rowCounts[label] !== undefined) {
       rowCounts[label] += 1;
@@ -539,6 +570,8 @@ export async function GET(request: NextRequest) {
       { name: 'Fila' },
       { name: 'Número' },
       { name: 'Sección' },
+      { name: 'Asistencia' },
+      { name: 'Hora Check-in' },
     ],
     rows: rowsForTable,
   });
@@ -546,15 +579,20 @@ export async function GET(request: NextRequest) {
   for (let r = 2; r <= rowsForTable.length + 1; r++) {
     const category = String(sheet.getCell(`C${r}`).value || '') as SeatCategory;
     const fillColor = LIGHT_CATEGORY_FILL[category] ?? 'FFFFFFFF';
-    for (let c = 1; c <= 6; c++) {
+    for (let c = 1; c <= 8; c++) {
       const cell = sheet.getCell(r, c);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+    }
+    // Highlight attendance column green if confirmed
+    const asistenciaCell = sheet.getCell(r, 7);
+    if (String(asistenciaCell.value).includes('✅')) {
+      asistenciaCell.font = { bold: true, color: { argb: 'FF047857' } };
     }
   }
 
   sheet.autoFilter = {
     from: 'A1',
-    to: `F${Math.max(rowsForTable.length + 1, 2)}`,
+    to: `H${Math.max(rowsForTable.length + 1, 2)}`,
   };
 
   const summarySheet = workbook.addWorksheet('Resumen');
