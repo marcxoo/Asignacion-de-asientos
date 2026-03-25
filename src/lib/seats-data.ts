@@ -87,4 +87,4 @@ export const CATEGORY_CONFIG: Record<SeatCategory, { label: string; color: strin
   bloqueado: { label: 'Bloqueado / Reservado', color: 'bg-indigo-900', hex: '#312e81' }, // Indigo 900
 };
 
-export const TEACHER_SLOT_LABEL = 'Cupo Disponible';
+export const TEACHER_SLOT_LABEL = 'Reservado';

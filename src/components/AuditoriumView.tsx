@@ -338,10 +338,6 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
 
   const handleAssign = async (seatId: string, nombre: string, categoria: SeatCategory, correo?: string) => {
     if (!activeTemplateId) return;
-    if (!correo?.trim()) {
-      alert('Debes ingresar un correo para enviar la asignacion.');
-      return;
-    }
 
     setLoading(true);
     // Optimistic Update
