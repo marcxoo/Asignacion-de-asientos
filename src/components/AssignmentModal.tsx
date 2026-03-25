@@ -145,7 +145,6 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
               </div>
             )}
 
-            {/* FEATURE DISABLED: Asistencia
             {!isBulk && assignment?.registro_id && onToggleAttendance && (
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] block ml-1">
@@ -170,7 +169,6 @@ export function AssignmentModal({ seatId, assignment, onAssign, onRelease, onClo
                 </div>
               </div>
             )}
-            */}
 
             <div className="space-y-4">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-[3px] block ml-1">

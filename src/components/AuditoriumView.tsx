@@ -665,7 +665,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
                 </div>
               </div>
 
-              {/* Excel Management */}
+              {/* Excel Management
               <div className="space-y-4 pt-4 border-t border-white/5">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-2">
                   <ChartBarIcon className="w-3.5 h-3.5" />
@@ -699,6 +699,7 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
                   </label>
                 </div>
               </div>
+              */}
 
               {/* QR Check-in Downloads */}
               <div className="space-y-4 pt-4 border-t border-white/5">

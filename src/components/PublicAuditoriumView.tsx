@@ -739,7 +739,6 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
             )}
           </AnimatePresence>
 
-          {/* FEATURE DISABLED: QR
           {mySeatId && (
             <div className="bg-white/5 rounded-2xl p-4 border border-white/5 space-y-3">
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[3px]">
@@ -764,7 +763,6 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
               )}
             </div>
           )}
-          */}
 
           {/* Legend Section */}
           <div className="space-y-5">
