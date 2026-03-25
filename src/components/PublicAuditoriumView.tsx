@@ -1013,6 +1013,9 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
                       </div>
                       <div className="absolute -right-80 top-[-130px] w-80 flex flex-col items-end gap-24">
                         <div className="flex items-center gap-8 h-full flex-row-reverse">
+                          <div className="px-4 py-2 border-2 border-red-500/60 bg-red-500/20 rounded-md flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30 transition-colors cursor-default">
+                            <span className="text-red-400 text-[11px] font-black uppercase whitespace-nowrap tracking-[2px] drop-shadow-sm">P. Emergencia</span>
+                          </div>
                           <div className="flex flex-col gap-1 items-end">
                             <div className="flex gap-4 items-center">
                               <div className="flex gap-1">{Array.from({ length: 7 }, (_, i) => <div key={`WR2-${7 - i}`}>{renderSeat(`W-WR2-${7 - i}`)}</div>)}</div>
