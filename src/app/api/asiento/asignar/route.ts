@@ -41,14 +41,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existing) {
-      const isTeacherSlot = existing.categoria === 'docente' && (!existing.registro_id || existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
-      const isGuestSlot = existing.categoria === 'invitado' && (!existing.registro_id || existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
-      const isStudentSlot = existing.categoria === 'estudiante' && (!existing.registro_id || existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado');
+      // Un "slot" es un asiento que ya tiene una categoría asignada por el admin (ej: reservado para docentes)
+      // pero que todavía no tiene un registro_id (nadie se ha sentado allí aún).
+      const isSlot = !existing.registro_id || existing.nombre_invitado === 'Cupo Disponible' || existing.nombre_invitado === 'Reservado';
 
-      const isSlotForMe =
-        (registro.categoria === 'docente' && isTeacherSlot) ||
-        (registro.categoria === 'invitado' && isGuestSlot) ||
-        (registro.categoria === 'estudiante' && isStudentSlot);
+      // El usuario puede tomar el asiento si:
+      // 1. Es un slot de SU categoría.
+      // 2. O si el asiento es de categoría 'invitado'/'estudiante' y el usuario es de esa categoría (para zonas libres).
+      const isSlotForMe = isSlot && existing.categoria === registro.categoria;
 
       if (existing.registro_id || !isSlotForMe) {
         return NextResponse.json(
@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // If we reach here, it's an available slot of the correct category.
-      // We delete it first to avoid unique constraint conflict on insert.
+      // Si llegamos aquí, es un slot disponible de la categoría correcta.
+      // Lo borramos para evitar conflictos de clave única al insertar el nuevo registro con los datos del usuario.
       await supabase.from('assignments').delete().eq('seat_id', seatId).eq('template_id', templateId);
     }
 
