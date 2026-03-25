@@ -15,7 +15,8 @@ import {
   ArrowUpTrayIcon,
   ClipboardDocumentIcon,
   XMarkIcon,
-  TrashIcon
+  TrashIcon,
+  LinkIcon
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
@@ -650,6 +651,21 @@ export function AuditoriumView({ onBack, activeTemplateId, activeTemplateName, o
             </h1>
             <p className="text-[10px] font-black text-slate-500 mt-2 uppercase tracking-[3px] opacity-60">Control Central</p>
           </motion.div>
+          {activeTemplateId && (
+            <button
+              onClick={() => {
+                const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                const url = `${origin}/e/${activeTemplateId}`;
+                navigator.clipboard.writeText(url).then(() => {
+                  alert('¡Enlace copiado al portapapeles!\n' + url);
+                });
+              }}
+              className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 rounded-2xl text-emerald-400 text-xs font-bold transition-all group"
+            >
+              <LinkIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              Copiar Enlace de Invitados
+            </button>
+          )}
         </div>
 
         {!isSidebarCollapsed && (

@@ -489,6 +489,8 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     const isTeacherSlot = assignment?.categoria === 'docente' && !assignment?.registro_id;
     const isGuestSlot = assignment?.categoria === 'invitado' && !assignment?.registro_id;
     const isStudentSlot = assignment?.categoria === 'estudiante' && !assignment?.registro_id;
+    const isAdminSlot = assignment?.categoria === 'administrativo' && !assignment?.registro_id;
+    const isCodTrabajoSlot = assignment?.categoria === 'codigo_trabajo' && !assignment?.registro_id;
 
     let isSelectable = false;
     let isBlocked = false;
@@ -502,6 +504,12 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     } else if (me.categoria === 'estudiante') {
       if (isStudentSlot || isMySeat) isSelectable = true;
       else isBlocked = true;
+    } else if (me.categoria === 'administrativo') {
+      if (isAdminSlot || isMySeat) isSelectable = true;
+      else isBlocked = true;
+    } else if (me.categoria === 'codigo_trabajo') {
+      if (isCodTrabajoSlot || isMySeat) isSelectable = true;
+      else isBlocked = true;
     } else {
       if (!assignment || isMySeat) isSelectable = true;
       else isBlocked = true;
@@ -509,7 +517,7 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
 
     if (assignment?.categoria === 'bloqueado') isBlocked = true;
 
-    const isSlot = isTeacherSlot || isGuestSlot || isStudentSlot;
+    const isSlot = isTeacherSlot || isGuestSlot || isStudentSlot || isAdminSlot || isCodTrabajoSlot;
 
     return (
       <div
@@ -584,6 +592,8 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
     const isTeacherSlot = assignment?.categoria === 'docente' && !assignment?.registro_id;
     const isGuestSlot = assignment?.categoria === 'invitado' && !assignment?.registro_id;
     const isStudentSlot = assignment?.categoria === 'estudiante' && !assignment?.registro_id;
+    const isAdminSlot = assignment?.categoria === 'administrativo' && !assignment?.registro_id;
+    const isCodTrabajoSlot = assignment?.categoria === 'codigo_trabajo' && !assignment?.registro_id;
     const isMySeat = selectedSeatId === mySeatId;
 
     if (me.categoria === 'docente') {
@@ -592,6 +602,10 @@ export function PublicAuditoriumView({ me, templateId, templateName, invitationT
       return isGuestSlot || isMySeat;
     } else if (me.categoria === 'estudiante') {
       return isStudentSlot || isMySeat;
+    } else if (me.categoria === 'administrativo') {
+      return isAdminSlot || isMySeat;
+    } else if (me.categoria === 'codigo_trabajo') {
+      return isCodTrabajoSlot || isMySeat;
     } else {
       return !assignment || isMySeat;
     }
